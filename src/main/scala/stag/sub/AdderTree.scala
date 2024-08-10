@@ -13,7 +13,7 @@ class AdderTree(numPeMultiplier: Int, portConfig: PortConfig) extends Module{
     io.output := io.input(0)
   } else {
     io.output := io.input.reduceTree(
-      (a,b) => RegNext( a +& b, 0.S),
+      (a,b) => RegNext(a +& b, 0.S),
       a => RegNext(a, 0.S)
     )
   }

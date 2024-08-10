@@ -3,7 +3,6 @@ package stag.output
 import chisel3._
 import stag.sub.PortConfig
 import stag.sub.Mac
-import _root_.circt.stage.ChiselStage
 
 class ProcessingElement(peMultiplierCount: Int, portConfig: PortConfig) extends Module {
 
@@ -25,11 +24,4 @@ class ProcessingElement(peMultiplierCount: Int, portConfig: PortConfig) extends 
   outputRegister := mac.io.output + Mux(io.partialSumReset, 0.S, outputRegister)
   io.output := outputRegister
 
-}
-
-object ProcessingElement extends App {
-  ChiselStage.emitSystemVerilogFile(
-    new ProcessingElement(8, PortConfig(8,8,8)),
-    firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
-  )
 }

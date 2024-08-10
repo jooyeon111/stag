@@ -21,14 +21,14 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
   val io = IO(new Bundle {
 
     //Input
-    val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(8.W)))
-    val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(8.W)))
+    val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
+    val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
 
     //Control
     val propagateA : Vec[Bool] = Input(Vec(arrayRow, Bool()))
 
     //Output
-    val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(32.W)))
+    val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portConfig.bitWidthC.W)))
 
   })
 
