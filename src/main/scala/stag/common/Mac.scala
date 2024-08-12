@@ -1,4 +1,4 @@
-package stag.sub
+package stag.common
 
 import chisel3._
 

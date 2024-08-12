@@ -1,7 +1,7 @@
 package stag.weight
 
 import chisel3._
-import stag.sub.PortConfig
+import stag.common.PortConfig
 
 class BlockProcessingElement(blockRow: Int, blockCol: Int, peMultiplierCount: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
 
@@ -20,68 +20,57 @@ class BlockProcessingElement(blockRow: Int, blockCol: Int, peMultiplierCount: In
   }
 
   val io = IO(new Bundle {
-
-    //Input
     val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
     val inputC: Option[Vec[SInt]] = if( flagInputC ) Some( Input(Vec(numOutput, SInt(portConfig.bitWidthC.W)))) else None
-
-    //Control
     val propagateB : Bool =  Input(Bool())
-
-    //Output
     val outputA: Vec[SInt] = Output(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
     val outputB: Vec[SInt] = Output(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
     val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portConfig.bitWidthC.W)))
-
   })
 
   //Wiring Input
   //Input A
-  for (i <- 0 until blockRow)
-    for (j <- 0 until blockCol)
-      for (k <- 0 until peMultiplierCount)
-        processingElementVector(i)(j).io.inputA(k) := io.inputA(i * peMultiplierCount + k)
+  for (a <- 0 until blockRow)
+    for (b <- 0 until blockCol)
+      for (p <- 0 until peMultiplierCount)
+        processingElementVector(a)(b).io.inputA(p) := io.inputA(a * peMultiplierCount + p)
 
   io.outputA := RegNext(io.inputA, VecInit.fill(numInputA)(0.S))
 
   //Input B
-  for (j <- 0 until blockCol)
-    for( k <- 0 until peMultiplierCount)
-      processingElementVector(0)(j).io.inputB(k) := io.inputB(j * peMultiplierCount + k)
+  for( b <- 0 until blockCol )
+    for( p <- 0 until peMultiplierCount )
+      processingElementVector(0)(b).io.inputB(p) := io.inputB(b * peMultiplierCount + p)
 
 
-  for (i <- 1 until blockRow)
-    for (j <- 0 until blockCol)
-      for(k <- 0 until peMultiplierCount)
-        processingElementVector(i)(j).io.inputB(k) := processingElementVector(i - 1)(j).io.outputB(k)
+  for( a <- 1 until blockRow )
+    for( b <- 0 until blockCol )
+      for( p <- 0 until peMultiplierCount )
+        processingElementVector(a)(b).io.inputB(p) := processingElementVector(a - 1)(b).io.outputB(p)
 
 
-  for (j <- 0 until blockCol)
-    for( k <- 0 until peMultiplierCount)
-      io.outputB(j * peMultiplierCount + k) := processingElementVector(blockRow - 1)(j).io.outputB(k)
+  for( b <- 0 until blockCol )
+    for( p <- 0 until peMultiplierCount )
+      io.outputB(b * peMultiplierCount + p) := processingElementVector(blockRow - 1)(b).io.outputB(p)
 
   //Wiring Control
-  for (i <- 0 until blockRow)
-    for (j <- 0 until blockCol)
-      processingElementVector(i)(j).io.propagateB := io.propagateB
+  for( a <- 0 until blockRow )
+    for( b <- 0 until blockCol )
+      processingElementVector(a)(b).io.propagateB := io.propagateB
 
   //Wiring Output
-  for (j <- 0 until blockCol) {
-    if(flagInputC) {
-      processingElementVector(0)(j).io.inputC.get := io.inputC.get(j)
-
-    }
-  }
-
-  for (i <- 1 until blockRow)
-    for (j <- 0 until blockCol) {
-      processingElementVector(i)(j).io.inputC.get := processingElementVector(i - 1)(j).io.outputC
-    }
-
-  for (j <- 0 until blockCol)
-    io.outputC(j) := RegNext(processingElementVector(blockRow - 1)(j).io.outputC, 0.S )
+  if(flagInputC)
+    for(b <- 0 until blockCol)
+      processingElementVector(0)(b).io.inputC.get := io.inputC.get(b)
 
 
+  for( a <- 1 until blockRow )
+    for( b <- 0 until blockCol )
+      processingElementVector(a)(b).io.inputC.get := processingElementVector(a - 1)(b).io.outputC
+
+
+  for( b <- 0 until blockCol )
+    io.outputC(b) := RegNext(processingElementVector(blockRow - 1)(b).io.outputC, 0.S )
 
 }

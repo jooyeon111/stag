@@ -12,13 +12,12 @@ class PostProcessor(arrayCol: Int, blockCol: Int, portBitWidth: Int) extends Mod
     val output: Vec[SInt] = Output(Vec(numPort, SInt(portBitWidth.W)))
   })
 
-  for ( i <- 0 until arrayCol)
-    for (j <- 0 until blockCol){
+  for (c <- 0 until arrayCol)
+    for (b <- 0 until blockCol){
 
-      val index = i * blockCol + j
-      val depth = arrayCol - index
-
-      io.output(index) := ShiftRegister(io.input(index), depth, 0.S, true.B)
+      val outputIndex = c * blockCol + b
+      val depth = arrayCol - outputIndex
+      io.output(outputIndex) := ShiftRegister(io.input(outputIndex), depth, 0.S, true.B)
 
     }
 

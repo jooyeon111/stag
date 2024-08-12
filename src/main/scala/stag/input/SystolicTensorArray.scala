@@ -1,12 +1,13 @@
 package stag.input
 
 import chisel3._
-import stag.sub.SystolicTensorArrayConfig
-import stag.sub.PortConfig
+import stag.common.SystolicTensorArrayConfig
+import stag.common.PortConfig
 
-class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : Int, val blockCol : Int, val numPeMultiplier : Int, portConfig: PortConfig) extends Module {
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig) =
-    this(arrayConfig.arrayRow, arrayConfig.arrayCol, arrayConfig.blockRow, arrayConfig.blockCol, arrayConfig.numPeMultiplier, portConfig)
+class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : Int, val blockCol : Int, val numPeMultiplier : Int, portConfig: PortConfig, generateRtl: Boolean) extends Module {
+
+  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig, generateRtl: Boolean) =
+    this(arrayConfig.arrayRow, arrayConfig.arrayCol, arrayConfig.blockRow, arrayConfig.blockCol, arrayConfig.numPeMultiplier, portConfig, generateRtl)
 
   val numInputA: Int = arrayRow * blockRow * numPeMultiplier
   val numInputB: Int = arrayCol * blockCol * numPeMultiplier
@@ -19,56 +20,90 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
   })
 
   val io = IO(new Bundle {
-
-    //Input
     val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
-
-    //Control
     val propagateA : Vec[Bool] = Input(Vec(arrayRow, Bool()))
-
-    //Output
     val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portConfig.bitWidthC.W)))
-
   })
 
-  //Wiring Input
-  //Wiring Input A
-  for (i <- 0 until arrayRow)
-    for (k <- 0 until blockRow * numPeMultiplier)
-      blockProcessingElementVector(i)(0).io.inputA(k) := io.inputA(k + (i * blockRow * numPeMultiplier))
+  if(generateRtl){
 
+    //Wiring Input A
+    for( r <- 0 until arrayRow)
+      for( a <- 0 until blockRow)
+        for( p <- 0 until numPeMultiplier) {
+          val multiplierIndex = a * numPeMultiplier + p
+          blockProcessingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * blockRow * numPeMultiplier)), 0.S)
+        }
 
-  for (i <- 0 until arrayRow)
-    for (j <- 1 until arrayCol)
-      for (k <- 0 until blockRow * numPeMultiplier)
-        blockProcessingElementVector(i)(j).io.inputA(k) := blockProcessingElementVector(i)(j - 1).io.outputA(k)
+    //Wiring Input B
+    for( c <- 0 until arrayCol)
+      for( b <- 0 until blockCol)
+        for( p <- 0 until numPeMultiplier) {
+          val multiplierIndex = b * numPeMultiplier + p
+          blockProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB( multiplierIndex + (c * blockCol * numPeMultiplier )), 0.S)
+        }
 
-  //Wiring Input B
-  for (i <- 0 until arrayCol)
-    for (k <- 0 until blockCol * numPeMultiplier)
-      blockProcessingElementVector(0)(i).io.inputB(k) := io.inputB(k + (i * blockCol * numPeMultiplier))
+    //Wiring Control
+    for( r <- 0 until arrayRow )
+      for( c <- 0 until arrayCol )
+        blockProcessingElementVector(r)(c).io.propagateA := RegNext( io.propagateA(r), false.B)
 
+  } else {
 
-  for (i <- 1 until arrayRow)
-    for (j <- 0 until arrayCol)
-      for (k <- 0 until blockCol * numPeMultiplier)
-        blockProcessingElementVector(i)(j).io.inputB(k) := blockProcessingElementVector(i - 1)(j).io.outputB(k)
+    //Wiring Input A
+    for( r <- 0 until arrayRow)
+      for( a <- 0 until blockRow)
+        for( p <- 0 until numPeMultiplier) {
+          val multiplierIndex = a * numPeMultiplier + p
+          blockProcessingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * blockRow * numPeMultiplier))
+        }
 
-  //Wiring Control
-  for (i <- 0 until arrayRow)
-    for (j <- 0 until arrayCol)
-      blockProcessingElementVector(i)(j).io.propagateA := io.propagateA(i)
+    //Wiring Input B
+    for( c <- 0 until arrayCol)
+      for( b <- 0 until blockCol)
+        for( p <- 0 until numPeMultiplier) {
+          val multiplierIndex = b * numPeMultiplier + p
+          blockProcessingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB( multiplierIndex + (c * blockCol * numPeMultiplier ))
+        }
+
+    //Wiring Control
+    for( r <- 0 until arrayRow )
+      for( c <- 0 until arrayCol )
+        blockProcessingElementVector(r)(c).io.propagateA := io.propagateA(r)
+
+  }
+
+  //Wiring Output A
+  for( r <- 0 until arrayRow)
+    for( c <- 1 until arrayCol)
+      for( a <- 0 until blockRow)
+        for( p <- 0 until numPeMultiplier) {
+          val multiplierIndex = a * numPeMultiplier + p
+          blockProcessingElementVector(r)(c).io.inputA(multiplierIndex) := blockProcessingElementVector(r)(c - 1).io.outputA(multiplierIndex)
+        }
+
+  //Wiring Output B
+  for( r <- 1 until arrayRow )
+    for( c <- 0 until arrayCol )
+      for( b <- 0 until blockCol )
+        for( p <- 0 until numPeMultiplier ) {
+          val multiplierIndex = b * numPeMultiplier + p
+          blockProcessingElementVector(r)(c).io.inputB(multiplierIndex) := blockProcessingElementVector(r-1)(c).io.outputB(multiplierIndex)
+        }
 
   //Wiring Output
-  for (i <- 1 until arrayCol)
-    for (j <- 0 until arrayRow)
-      for (k <- 0 until blockRow)
-        blockProcessingElementVector(i)(j).io.inputC.get(k) := blockProcessingElementVector(i)(j - 1).io.outputC(k)
+  for( r <- 0 until arrayRow )
+    for( c <- 1 until arrayCol )
+      for( a <- 0 until blockRow )
+        blockProcessingElementVector(r)(c).io.inputC.get(a) := blockProcessingElementVector(r)(c - 1).io.outputC(a)
 
-  for (i <- 0 until arrayRow)
-    for (k <- 0 until blockRow)
-      io.outputC(k + (i * blockRow)) := blockProcessingElementVector(i)(arrayCol - 1).io.outputC(k)
+  for( r <- 0 until arrayRow )
+    for( a <- 0 until blockRow )
+      io.outputC(a + (r * blockRow)) := blockProcessingElementVector(r)(arrayCol - 1).io.outputC(a)
+
+
+
 
 
 }

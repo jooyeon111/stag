@@ -1,4 +1,4 @@
-package stag.sub
+package stag.common
 
 case class PortConfig(bitWidthA: Int, bitWidthB: Int, bitWidthC: Int){
 

@@ -1,7 +1,7 @@
 package stag.output
 
 import chisel3._
-import stag.sub.{PreProcessor, SystolicTensorArrayConfig, PortConfig}
+import stag.common.{PreProcessor, SystolicTensorArrayConfig, PortConfig}
 
 //Pod = Pre Processing Unit +  Systolic Tensor Array + Post Processing Unit
 class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow : Int, val blockCol : Int, val numPeMultiplier : Int, portConfig: PortConfig) extends Module {
@@ -15,21 +15,16 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
 
   val preProcessorInputA = Module (new PreProcessor(arrayRow, blockRow, numPeMultiplier, skewFlag = true, portConfig.bitWidthA))
   val preProcessorInputB = Module (new PreProcessor(arrayCol, blockCol, numPeMultiplier, skewFlag = true, portConfig.bitWidthB))
-  val systolicTensorArray = Module (new SystolicTensorArray(arrayRow, arrayCol, blockRow, blockCol, numPeMultiplier, portConfig))
+  val systolicTensorArray = Module (new SystolicTensorArray(arrayRow, arrayCol, blockRow, blockCol, numPeMultiplier, portConfig, generateRtl = false))
+  val postProcessor = Module (new PostProcessor(arrayRow, arrayCol, blockRow, blockCol, portConfig.bitWidthC))
 
+  //TODO register in front of control signals
   val io = IO(new Bundle {
-
-    //Input
     val inputA: Vec[SInt] = Input(Vec(numInputA,SInt(portConfig.bitWidthA.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB,SInt(portConfig.bitWidthB.W)))
-
-    //Control
     val propagateOutput: Vec[Vec[Bool]] =  Input(Vec(arrayRow - 1, Vec(arrayCol - 1, Bool())))
     val partialSumReset: Vec[Vec[Bool]] =  Input(Vec(arrayRow, Vec(arrayCol, Bool())))
-
-    //Output
     val outputC: Vec[SInt] = Output(Vec(numOutput,SInt(portConfig.bitWidthC.W)))
-
   })
 
   //Wiring Input
@@ -37,10 +32,11 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
   preProcessorInputB.io.input := io.inputB
   systolicTensorArray.io.inputA := preProcessorInputA.io.output
   systolicTensorArray.io.inputB := preProcessorInputB.io.output
+  postProcessor.io.input := systolicTensorArray.io.outputC
 
   //Wiring Control
-  systolicTensorArray.io.partialSumReset := io.partialSumReset
-  systolicTensorArray.io.propagateOutput := io.propagateOutput
+  systolicTensorArray.io.partialSumReset := RegNext(io.partialSumReset, false.B)
+  systolicTensorArray.io.propagateOutput := RegNext(io.propagateOutput, false.B)
 
   //Wiring Output
   io.outputC := systolicTensorArray.io.outputC

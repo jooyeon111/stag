@@ -1,8 +1,8 @@
 package stag.input
 
 import chisel3._
-import stag.sub.PortConfig
-import stag.sub.Mac
+import stag.common.PortConfig
+import stag.common.Mac
 
 class ProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
 
@@ -19,7 +19,7 @@ class ProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portConfig:
     val propagateA: Bool = Input(Bool())
 
     //Output
-    val outputA: Vec[SInt] = Output(Vec(peMultiplierCount, SInt(portConfig.bitWidthB.W)))
+    val outputA: Vec[SInt] = Output(Vec(peMultiplierCount, SInt(portConfig.bitWidthA.W)))
     val outputC: SInt = Output(SInt(portConfig.bitWidthC.W))
 
   })

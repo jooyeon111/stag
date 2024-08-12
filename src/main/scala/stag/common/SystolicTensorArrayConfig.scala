@@ -1,4 +1,4 @@
-package stag.sub
+package stag.common
 
 case class SystolicTensorArrayConfig(arrayRow: Int, arrayCol: Int, blockRow: Int, blockCol: Int, numPeMultiplier: Int ) {
 

@@ -1,7 +1,7 @@
 package stag.weight
 
 import chisel3._
-import stag.sub.{PortConfig, PreProcessor, SystolicTensorArrayConfig}
+import stag.common.{PortConfig, PreProcessor, SystolicTensorArrayConfig}
 
 class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow : Int, val blockCol : Int, val numPeMultiplier : Int, portConfig: PortConfig) extends Module {
 
@@ -14,20 +14,15 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
 
   val preProcessorInputA = Module (new PreProcessor(arrayRow, blockRow, numPeMultiplier, skewFlag = true, portConfig.bitWidthA))
   val preProcessorInputB = Module (new PreProcessor(arrayRow, blockRow, numPeMultiplier, skewFlag = false, portConfig.bitWidthA))
-  val systolicTensorArray = Module (new SystolicTensorArray(arrayRow, arrayCol, blockRow, blockCol, numPeMultiplier, portConfig))
+  val systolicTensorArray = Module (new SystolicTensorArray(arrayRow, arrayCol, blockRow, blockCol, numPeMultiplier, portConfig, generateRtl = false))
+  val postProcessor = Module (new PostProcessor(arrayCol, blockCol, portConfig.bitWidthC))
 
+  //TODO register in front of control signals
   val io = IO(new Bundle {
-
-    //Input
     val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(8.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(8.W)))
-
-    //Control
     val propagateB : Vec[Bool] = Input(Vec(arrayRow, Bool()))
-
-    //Output
     val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(32.W)))
-
   })
 
   //Wiring Input
@@ -35,9 +30,10 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
   preProcessorInputB.io.input := io.inputB
   systolicTensorArray.io.inputA := preProcessorInputA.io.output
   systolicTensorArray.io.inputB := preProcessorInputB.io.output
+  postProcessor.io.input := systolicTensorArray.io.outputC
 
   //Wiring Control
-  systolicTensorArray.io.propagateB := io.propagateB
+  systolicTensorArray.io.propagateB := RegNext(io.propagateB, false.B)
 
   //Wiring Output
   io.outputC := systolicTensorArray.io.outputC

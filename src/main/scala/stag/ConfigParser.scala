@@ -12,11 +12,11 @@ object ConfigParser {
 
   def parseConfigFile(filename: String): Try[Config] = {
     Try {
-      val source = Source.fromFile(filename)
-      val lines = source.getLines().filterNot(line => line.trim.isEmpty || line.trim.startsWith("#"))
+      val source = Source.fromResource(filename)
+      val lines = source.getLines().filterNot(line => line.trim.isEmpty || line.trim.startsWith("#") || line.startsWith("["))
       val configMap = lines.collect {
-        case line if line.contains("=") =>
-          val Array(key, value) = line.split("=", 2).map(_.trim)
+        case line if line.contains(":") =>
+          val Array(key, value) = line.split(":", 2).map(_.trim)
           key -> value
       }.toMap
       source.close()

@@ -1,8 +1,8 @@
 package stag.output
 
 import chisel3._
-import stag.sub.PortConfig
-import stag.sub.Mac
+import stag.common.PortConfig
+import stag.common.Mac
 
 class ProcessingElement(peMultiplierCount: Int, portConfig: PortConfig) extends Module {
 

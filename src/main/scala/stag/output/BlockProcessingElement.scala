@@ -1,7 +1,7 @@
 package stag.output
 
 import chisel3._
-import stag.sub.PortConfig
+import stag.common.PortConfig
 
 class BlockProcessingElement(blockRow: Int, blockCol: Int, numPeMultiplier: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
 
@@ -12,9 +12,9 @@ class BlockProcessingElement(blockRow: Int, blockCol: Int, numPeMultiplier: Int,
   val processingElementVector: Vector[Vector[ProcessingElement]] =
     Vector.fill(blockRow, blockCol)(Module( new ProcessingElement(numPeMultiplier, portConfig)))
 
-  val registerOutputA = RegInit(VecInit(Seq.fill(numInputA)(0.S(portConfig.bitWidthA))))
-  val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(0.S(portConfig.bitWidthB))))
-  val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(0.S(portConfig.bitWidthC))))
+  val registerOutputA = RegInit(VecInit(Seq.fill(numInputA)(0.S(portConfig.bitWidthA.W))))
+  val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(0.S(portConfig.bitWidthB.W))))
+  val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(0.S(portConfig.bitWidthC.W))))
 
   val io = IO(new Bundle {
 
@@ -34,38 +34,40 @@ class BlockProcessingElement(blockRow: Int, blockCol: Int, numPeMultiplier: Int,
 
   })
 
-  //Wiring Input
-  for( i <- 0 until blockRow)
-    for(j <- 0 until blockCol)
-      for(k <-0 until numPeMultiplier)
-        processingElementVector(i)(j).io.inputA(k) := io.inputA(i * numPeMultiplier + k)
-
-  for( i <- 0 until blockRow)
-    for(j <- 0 until blockCol)
-      for(k <-0 until numPeMultiplier)
-        processingElementVector(i)(j).io.inputB(k) := io.inputB(j * numPeMultiplier + k)
-
-  //Wiring Control
-  for( i <- 0 until blockRow)
-    for( j <- 0 until blockCol)
-      processingElementVector(i)(j).io.partialSumReset := io.partialSumReset
-
-  //Wiring Output
+  //Wiring Input A
+  for( a <- 0 until blockRow )
+    for( b <- 0 until blockCol )
+      for( p <-0 until numPeMultiplier )
+        processingElementVector(a)(b).io.inputA(p) := io.inputA(a * numPeMultiplier + p)
 
   registerOutputA := io.inputA
+
+  //Wiring Input B
+  for( a <- 0 until blockRow )
+    for( b <- 0 until blockCol )
+      for( p <- 0 until numPeMultiplier )
+        processingElementVector(a)(b).io.inputB(p) := io.inputB(b * numPeMultiplier + p)
+
   registerOutputB := io.inputB
 
-  for (i <- 0 until blockRow; j <- 0 until blockCol){
-    val index = i * blockCol + j
-    if(flagInputC){
-      registerOutputC(index) := Mux(io.propagateOutput.get, io.inputC.get(index), processingElementVector(i)(j).io.output)
-    }else{
-      registerOutputC(index) := processingElementVector(i)(j).io.output
-    }
-  }
+  //Wiring Control
+  for( a <- 0 until blockRow)
+    for( b <- 0 until blockCol)
+      processingElementVector(a)(b).io.partialSumReset := io.partialSumReset
 
- io.outputA := registerOutputA
- io.outputB := registerOutputB
- io.outputC := registerOutputC
+  //Wiring Input C
+  for( a <- 0 until blockRow)
+    for( b <- 0 until blockCol){
+      val index = a * blockCol + b
+      if(flagInputC)
+        registerOutputC(index) := Mux(io.propagateOutput.get, io.inputC.get(index), processingElementVector(a)(b).io.output)
+      else
+        registerOutputC(index) := processingElementVector(a)(b).io.output
+    }
+
+  //Wiring Output
+  io.outputA := registerOutputA
+  io.outputB := registerOutputB
+  io.outputC := registerOutputC
 
 }

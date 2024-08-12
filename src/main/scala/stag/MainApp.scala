@@ -1,8 +1,8 @@
 package stag
 
 import _root_.circt.stage.ChiselStage
-import stag.sub.SystolicTensorArrayConfig
-import stag.sub.PortConfig
+import stag.common.SystolicTensorArrayConfig
+import stag.common.PortConfig
 
 import scala.util.{Failure, Success}
 
@@ -51,18 +51,18 @@ object MainApp extends App {
       dataflow match {
         case "IS" =>
           ChiselStage.emitSystemVerilogFile(
-            new stag.input.SystolicTensorArray(arrayConfig, portConfig),
-            firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
+            new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+            firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_sta_{${r}x$c}x{${a}x$b}x$p.sv")
           )
         case "OS" =>
           ChiselStage.emitSystemVerilogFile(
-            new stag.output.SystolicTensorArray(arrayConfig, portConfig),
-            firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
+            new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+            firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_sta_{${r}x$c}x{${a}x$b}x$p.sv")
           )
         case "WS" =>
           ChiselStage.emitSystemVerilogFile(
-            new stag.weight.SystolicTensorArray(arrayConfig, portConfig),
-            firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
+            new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+            firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_sta_{${r}x$c}x{${a}x$b}x$p.sv")
           )
       }
 
@@ -71,10 +71,4 @@ object MainApp extends App {
       sys.exit(1)
 
   }
-
-  ChiselStage.emitSystemVerilogFile(
-    new stag.output.ProcessingElement(8, stag.sub.PortConfig(8,8,8)),
-    firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
-  )
-
 }
