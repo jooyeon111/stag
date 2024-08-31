@@ -11,6 +11,7 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
 
   val numInputA: Int = arrayRow * blockRow * numPeMultiplier
   val numInputB: Int = arrayCol * blockCol * numPeMultiplier
+  val numPropagateA: Int = arrayCol * blockCol
   val numOutput : Int = arrayRow * blockRow
 
   val blockProcessingElementVector: Vector[Vector[BlockProcessingElement]] = Vector.tabulate(arrayRow, arrayCol)((_,y) => if ( y == 0 ) {
@@ -22,7 +23,7 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
   val io = IO(new Bundle {
     val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
-    val propagateA : Vec[Bool] = Input(Vec(arrayRow, Bool()))
+    val propagateA : Vec[Bool] = Input(Vec(numPropagateA, Bool()))
     val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portConfig.bitWidthC.W)))
   })
 
@@ -47,7 +48,8 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
     //Wiring Control
     for( r <- 0 until arrayRow )
       for( c <- 0 until arrayCol )
-        blockProcessingElementVector(r)(c).io.propagateA := RegNext( io.propagateA(r), false.B)
+        for( b <- 0 until blockCol)
+          blockProcessingElementVector(r)(c).io.propagateA(b) := RegNext( io.propagateA(b + c * blockCol), false.B)
 
   } else {
 
@@ -70,7 +72,8 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
     //Wiring Control
     for( r <- 0 until arrayRow )
       for( c <- 0 until arrayCol )
-        blockProcessingElementVector(r)(c).io.propagateA := io.propagateA(r)
+        for( b <- 0 until blockCol)
+          blockProcessingElementVector(r)(c).io.propagateA(b) := io.propagateA(b + c * blockCol)
 
   }
 

@@ -23,7 +23,7 @@ class BlockProcessingElement(blockRow: Int, blockCol: Int, peMultiplierCount: In
     val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
     val inputC: Option[Vec[SInt]] = if( flagInputC ) Some( Input(Vec(numOutput, SInt(portConfig.bitWidthC.W)))) else None
-    val propagateA : Bool =  Input(Bool())
+    val propagateA: Vec[Bool] = Input(Vec(blockRow, Bool()))
     val outputA: Vec[SInt] = Output(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
     val outputB: Vec[SInt] = Output(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
     val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portConfig.bitWidthC.W)))
@@ -55,7 +55,7 @@ class BlockProcessingElement(blockRow: Int, blockCol: Int, peMultiplierCount: In
   //Wiring Control
   for (a <- 0 until blockRow)
     for (b <- 0 until blockCol)
-      processingElementVector(a)(b).io.propagateA := io.propagateA
+      processingElementVector(a)(b).io.propagateA := io.propagateA(b)
 
   //Wiring Input C
   if(flagInputC)

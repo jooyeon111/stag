@@ -13,5 +13,5 @@ clean:
 	if [ -d $(CURDIR)/output/ ]; then \
 		rm -rf $(CURDIR)/output/*; \
 	else \
-	  echo "[error]There is no output directory"; \
+	  echo "There is no output directory"; \
   	fi

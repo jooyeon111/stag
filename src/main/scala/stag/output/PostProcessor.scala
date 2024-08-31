@@ -12,7 +12,7 @@ class PostProcessor(arrayRow: Int, arrayCol: Int, blockRow: Int, blockCol: Int, 
     val output: Vec[SInt] = Output(Vec(numPort, SInt(portBitWidth.W)))
   })
 
-  //TODO
+  //
   for( i <- 0 until arrayRow + arrayCol - 1)
     for(j <- 0 until blockRow * blockCol){
 

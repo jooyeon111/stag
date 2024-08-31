@@ -10,6 +10,7 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
 
   val numInputA: Int = arrayRow * blockRow * numPeMultiplier
   val numInputB: Int = arrayCol * blockCol * numPeMultiplier
+  val numPropagateB: Int = arrayRow * blockRow
   val numOutput : Int = arrayCol * blockCol
 
   val preProcessorInputA = Module (new PreProcessor(arrayRow, blockRow, numPeMultiplier, skewFlag = true, portConfig.bitWidthA))
@@ -17,11 +18,11 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
   val systolicTensorArray = Module (new SystolicTensorArray(arrayRow, arrayCol, blockRow, blockCol, numPeMultiplier, portConfig, generateRtl = false))
   val postProcessor = Module (new PostProcessor(arrayCol, blockCol, portConfig.bitWidthC))
 
-  //TODO register in front of control signals
+  // register in front of control signals
   val io = IO(new Bundle {
     val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(8.W)))
     val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(8.W)))
-    val propagateB : Vec[Bool] = Input(Vec(arrayRow, Bool()))
+    val propagateB : Vec[Bool] = Input(Vec(numPropagateB, Bool()))
     val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(32.W)))
   })
 
@@ -33,7 +34,7 @@ class SystolicTensorArrayPod(val arrayRow: Int, val arrayCol : Int, val blockRow
   postProcessor.io.input := systolicTensorArray.io.outputC
 
   //Wiring Control
-  systolicTensorArray.io.propagateB := RegNext(io.propagateB, false.B)
+  systolicTensorArray.io.propagateB := RegNext(io.propagateB, VecInit.fill(numPropagateB)(false.B))
 
   //Wiring Output
   io.outputC := systolicTensorArray.io.outputC
