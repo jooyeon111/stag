@@ -25,5 +25,5 @@ Configuration files is located in src/main/resources/
 ## Proposed systolic tensor array architecture image
 ### Input stationary systolic tensor array 
 ### Output stationary systolic tensor array
-![output stationary systolic tensor arrays](images/output_stationary_systolic_tensorarray.png)
+![output stationary systolic tensor arrays](images/output_stationary_systolic_tensor_array.png)
 ### Weight stationary systolic tensor array
