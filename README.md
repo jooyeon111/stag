@@ -10,7 +10,7 @@ Currently, STAG propose 2 types of systolic arrays with 3 dataflows input statio
 
 We are going to provide control logic and automatic RTL test soon.  
 
-## 5 parameters that make up the systolic tensor arrays
+## 5 essential systolic tensor array parameters 
 R: The row of block PE  
 C: The column of block PE  
 A: The row of tensor PE  
