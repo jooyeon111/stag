@@ -10,11 +10,19 @@ Currently, STAG propose 2 types of systolic arrays with 3 dataflows input statio
 
 We are going to provide control logic and automatic RTL test soon.
 
+## 5 parameters that make up the systolic tensor arrays
+R: The row of block PE
+C: The column of block PE
+A: The row of tensor PE
+B: The column of tensor PE
+P: The total number of multipliers in PE
+Based on these 5 parameters, we can easily generate the systolic tensor array RTL.
+
 ## How to run
-Download [Chisel](https://github.com/chipsalliance/chisel) and run makefile.
+Download [Chisel](https://github.com/chipsalliance/chisel) and run the makefile.
 Configuration files is located in main/resources/
 
-## Proposed systolic tensor array architecture
+## Proposed systolic tensor array architecture image
 ### Input stationary systolic tensor array 
 ### Output stationary systolic tensor array
 ### Weight stationary systolic tensor array
