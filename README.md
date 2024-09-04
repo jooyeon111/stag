@@ -20,9 +20,10 @@ Based on these 5 parameters, we can easily generate the systolic tensor array RT
 
 ## How to run
 Download [Chisel](https://github.com/chipsalliance/chisel) and run the makefile.
-Configuration files is located in main/resources/
+Configuration files is located in src/main/resources/
 
 ## Proposed systolic tensor array architecture image
 ### Input stationary systolic tensor array 
 ### Output stationary systolic tensor array
+![output stationary systolic tensor arrays](images/output_stationary_systolic_tensorarray.png)
 ### Weight stationary systolic tensor array
