@@ -1,7 +1,7 @@
 rtl:
-	sbt "runMain stag.MainApp is_sta_{4x4}x{4x4}x4.cfg"
-	sbt "runMain stag.MainApp os_sta_{4x4}x{4x4}x4.cfg"
-	sbt "runMain stag.MainApp ws_sta_{4x4}x{4x4}x4.cfg"
+	sbt "runMain stag.MainApp input_stationary.cfg"
+	sbt "runMain stag.MainApp output_stationary.cfg"
+	sbt "runMain stag.MainApp weight_stationary.cfg"
 
 test:
 	sbt "test"

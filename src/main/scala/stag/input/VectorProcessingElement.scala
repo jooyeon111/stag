@@ -4,7 +4,7 @@ import chisel3._
 import stag.common.PortConfig
 import stag.common.Mac
 
-class ProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
+class VectorProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
 
   val mac: Mac = Module(new Mac(peMultiplierCount, portConfig))
 

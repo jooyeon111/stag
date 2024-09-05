@@ -4,21 +4,21 @@ import chisel3._
 import stag.common.SystolicTensorArrayConfig
 import stag.common.PortConfig
 
-class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : Int, val blockCol : Int, val numPeMultiplier : Int, portConfig: PortConfig, generateRtl: Boolean) extends Module{
+class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorPeRow : Int, val vectorPeCol : Int, val numPeMultiplier : Int, portConfig: PortConfig, generateRtl: Boolean) extends Module{
 
   def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig, generateRtl: Boolean) =
-    this(arrayConfig.arrayRow, arrayConfig.arrayCol, arrayConfig.blockRow, arrayConfig.blockCol, arrayConfig.numPeMultiplier, portConfig, generateRtl)
+    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, generateRtl)
 
-  val numInputA: Int = arrayRow * blockRow * numPeMultiplier
-  val numInputB: Int = arrayCol * blockCol * numPeMultiplier
-  val numPropagateB: Int = arrayRow * blockRow
-  val numOutput : Int = arrayCol * blockCol
+  val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
+  val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
+  val numPropagateB: Int = groupPeRow * vectorPeRow
+  val numOutput : Int = groupPeCol * vectorPeCol
 
-  val blockProcessingElementVector: Vector[Vector[BlockProcessingElement]] = Vector.tabulate(arrayRow, arrayCol)((x,_) => if ( x == 0 ) {
-    Module(new BlockProcessingElement(blockRow, blockCol, numPeMultiplier, flagInputC = false, portConfig))
+  val groupProcessingElementVector: Vector[Vector[GroupProcessingElement]] = Vector.tabulate(groupPeRow, groupPeCol)((x,_) => if ( x == 0 ) {
+    Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
 
   } else{
-    Module(new BlockProcessingElement(blockRow, blockCol, numPeMultiplier, flagInputC = true, portConfig))
+    Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
   })
 
   val io = IO(new Bundle {
@@ -30,77 +30,77 @@ class SystolicTensorArray(val arrayRow: Int, val arrayCol : Int, val blockRow : 
 
   if(generateRtl){
     //Wiring Input A
-    for( r <- 0 until arrayRow)
-      for( a <- 0 until blockRow)
+    for( r <- 0 until groupPeRow)
+      for( a <- 0 until vectorPeRow)
         for( p <- 0 until numPeMultiplier){
           val multiplierIndex = a * numPeMultiplier + p
-          blockProcessingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext(io.inputA(multiplierIndex + (r * blockRow * numPeMultiplier)), 0.S)
+          groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext(io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), 0.S)
         }
 
     //Wiring Input B
-    for( c <- 0 until arrayCol )
-      for( b <- 0 until blockCol)
+    for( c <- 0 until groupPeCol )
+      for( b <- 0 until vectorPeCol)
         for( p <- 0 until numPeMultiplier){
           val multiplierIndex = b * numPeMultiplier + p
-          blockProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext(io.inputB(multiplierIndex + (c * blockCol * numPeMultiplier)), 0.S)
+          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext(io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier)), 0.S)
 
         }
 
     //Wiring Control
-    for( r <- 0 until arrayRow )
-      for( c <- 0 until arrayCol )
-        for( a <- 0 until blockRow )
-          blockProcessingElementVector(r)(c).io.propagateB(a) := RegNext(io.propagateB(a + r * blockRow), false.B)
+    for( r <- 0 until groupPeRow )
+      for( c <- 0 until groupPeCol )
+        for( a <- 0 until vectorPeRow )
+          groupProcessingElementVector(r)(c).io.propagateB(a) := RegNext(io.propagateB(a + r * vectorPeRow), false.B)
 
   } else {
     //Wiring Input A
-    for( r <- 0 until arrayRow)
-      for( a <- 0 until blockRow)
+    for( r <- 0 until groupPeRow)
+      for( a <- 0 until vectorPeRow)
         for( p <- 0 until numPeMultiplier){
           val multiplierIndex = a * numPeMultiplier + p
-          blockProcessingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * blockRow * numPeMultiplier))
+          groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
         }
 
     //Wiring Input B
-    for( c <- 0 until arrayCol )
-      for( b <- 0 until blockCol)
+    for( c <- 0 until groupPeCol )
+      for( b <- 0 until vectorPeCol)
         for( p <- 0 until numPeMultiplier){
           val multiplierIndex = b * numPeMultiplier + p
-          blockProcessingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * blockCol * numPeMultiplier))
+          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
 
         }
 
     //Wiring Control
-    for( r <- 0 until arrayRow )
-      for( c <- 0 until arrayCol )
-        for( a <- 0 until blockRow )
-          blockProcessingElementVector(r)(c).io.propagateB(a) := io.propagateB(a + r * blockRow)
+    for( r <- 0 until groupPeRow )
+      for( c <- 0 until groupPeCol )
+        for( a <- 0 until vectorPeRow )
+          groupProcessingElementVector(r)(c).io.propagateB(a) := io.propagateB(a + r * vectorPeRow)
 
   }
 
-  for( r <- 0 until arrayRow )
-    for( c <- 1 until arrayCol )
-      for( a <- 0 until blockRow )
+  for( r <- 0 until groupPeRow )
+    for( c <- 1 until groupPeCol )
+      for( a <- 0 until vectorPeRow )
         for( p <- 0 until numPeMultiplier ){
           val multiplierIndex = a * numPeMultiplier + p
-          blockProcessingElementVector(r)(c).io.inputA(multiplierIndex) := blockProcessingElementVector(r)(c - 1).io.outputA(multiplierIndex)
+          groupProcessingElementVector(r)(c).io.inputA(multiplierIndex) := groupProcessingElementVector(r)(c - 1).io.outputA(multiplierIndex)
         }
 
-  for( r <- 1 until arrayRow )
-    for( c <- 0 until arrayCol )
-      for( b <- 0 until blockCol )
+  for( r <- 1 until groupPeRow )
+    for( c <- 0 until groupPeCol )
+      for( b <- 0 until vectorPeCol )
         for( p <- 0 until numPeMultiplier ){
           val multiplierIndex = b * numPeMultiplier + p
-          blockProcessingElementVector(r)(c).io.inputB(multiplierIndex) := blockProcessingElementVector(r - 1)(c).io.outputB(multiplierIndex)
+          groupProcessingElementVector(r)(c).io.inputB(multiplierIndex) := groupProcessingElementVector(r - 1)(c).io.outputB(multiplierIndex)
         }
 
-  for( r <- 1 until arrayRow )
-    for( c <- 0 until arrayCol )
-      for( b <- 0 until blockCol )
-        blockProcessingElementVector(r)(c).io.inputC.get(b) := blockProcessingElementVector(r - 1)(c).io.outputC(b)
+  for( r <- 1 until groupPeRow )
+    for( c <- 0 until groupPeCol )
+      for( b <- 0 until vectorPeCol )
+        groupProcessingElementVector(r)(c).io.inputC.get(b) := groupProcessingElementVector(r - 1)(c).io.outputC(b)
 
-  for( c <- 0 until arrayCol )
-    for( b <- 0 until blockCol )
-      io.outputC(b + (c * blockCol)) := blockProcessingElementVector(arrayRow - 1)(c).io.outputC(b)
+  for( c <- 0 until groupPeCol )
+    for( b <- 0 until vectorPeCol )
+      io.outputC(b + (c * vectorPeCol)) := groupProcessingElementVector(groupPeRow - 1)(c).io.outputC(b)
 
 }
