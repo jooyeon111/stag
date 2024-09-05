@@ -6,9 +6,9 @@ STAG automatically generate systolic tensor array RTL in various forms.
 
 Currently, STAG propose 2 types of systolic arrays with 3 dataflows input stationary, output stationary and weight stationary.  
 1. Systolic tensor array  
-2. Dimension-Aligned Systolic Tensor Array = skew buffer + systolic tensor array + de-skew buffer  
+2. Dimension aligned Systolic Tensor Array = skew buffer + systolic tensor array + de-skew buffer  
 
-We are going to provide control logic and automatic RTL test soon.  
+My project goal is de-facto of NPU architecture!
 
 ## 5 essential systolic tensor array parameters 
 R: The row of group PE  
@@ -32,3 +32,7 @@ Configuration files is located in src/main/resources/
 
 ## Proposed dimension aligned tensor array architecture image
 ![Overview of dimension aligned systolic tensor array](images/dimension_aligned_systolic_tensor_array.png)
+
+## Will be updated soon!  
+1. Control logic = task queue + FSM  
+2. RTL automatic test code with chisel test  
