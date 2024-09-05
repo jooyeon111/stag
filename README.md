@@ -8,7 +8,7 @@ Currently, STAG propose 2 types of systolic arrays with 3 dataflows input statio
 1. Systolic tensor array  
 2. Dimension aligned Systolic Tensor Array = skew buffer + systolic tensor array + de-skew buffer  
 
-My project goal is de-facto of NPU architecture!
+My project goal is to become the de-facto standard of NPU architecture!  
 
 ## 5 essential systolic tensor array parameters 
 R: The row of group PE  
