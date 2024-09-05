@@ -11,7 +11,7 @@ Currently, STAG propose 2 types of systolic arrays with 3 dataflows input statio
 We are going to provide control logic and automatic RTL test soon.  
 
 ## 5 essential systolic tensor array parameters 
-R: The row of group PE
+R: The row of group PE  
 C: The column of group PE  
 A: The row of vector PE  
 B: The column of vector PE  
@@ -31,9 +31,4 @@ Configuration files is located in src/main/resources/
 ![Weight stationary systolic tensor array](images/weight_stationary_systolic_tensor_array.png)
 
 ## Proposed dimension aligned tensor array architecture image
-### Dimension aligned input stationary systolic tensor array
-![Dimension aligned input stationary systolic tensor array](images/input_stationary_systolic_tensor_array.png)
-### Dimension aligned output stationary systolic tensor array
-![Dimension aligned output stationary systolic tensor array](images/output_stationary_systolic_tensor_array.png)
-### Dimension aligned weight stationary systolic tensor array
-![Dimension aligned weight stationary systolic tensor array](images/weight_stationary_systolic_tensor_array.png)
+![Overview of dimension aligned systolic tensor array](images/dimension_aligned_systolic_tensor_array.png)
