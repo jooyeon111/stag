@@ -23,7 +23,9 @@ Download [Chisel](https://github.com/chipsalliance/chisel) and run the makefile.
 Configuration files is located in src/main/resources/
 
 ## Proposed systolic tensor array architecture image
-### Input stationary systolic tensor array 
+### Input stationary systolic tensor array
+![Input stationary systolic tensor arrays](images/input_stationary_systolic_tensor_array.png)
 ### Output stationary systolic tensor array
-![output stationary systolic tensor arrays](images/output_stationary_systolic_tensor_array.png)
+![Output stationary systolic tensor arrays](images/output_stationary_systolic_tensor_array.png)
 ### Weight stationary systolic tensor array
+![Weight stationary systolic tensor arrays](images/weight_stationary_systolic_tensor_array.png)
