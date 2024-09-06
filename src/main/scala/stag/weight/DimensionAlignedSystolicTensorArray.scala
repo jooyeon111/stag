@@ -1,22 +1,22 @@
 package stag.weight
 
 import chisel3._
-import stag.common.{PortConfig, PreProcessor, SystolicTensorArrayConfig}
+import stag.common.{PortBitWidth, PreProcessor, SystolicTensorArrayConfig}
 
-class DimensionAlignedSystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorPeRow : Int, val vectorPeCol : Int, val numPeMultiplier : Int, portConfig: PortConfig) extends Module {
+class DimensionAlignedSystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorPeRow : Int, val vectorPeCol : Int, val numPeMultiplier : Int, portBitWidth: PortBitWidth) extends Module {
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig)
+  def this(arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth) =
+    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portBitWidth)
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateB: Int = groupPeRow * vectorPeRow
   val numOutput : Int = groupPeCol * vectorPeCol
 
-  val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.bitWidthA))
-  val preProcessorInputB = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = false, portConfig.bitWidthA))
-  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
-  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, portConfig.bitWidthC))
+  val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portBitWidth.bitWidthA))
+  val preProcessorInputB = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = false, portBitWidth.bitWidthA))
+  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portBitWidth, generateRtl = false))
+  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, portBitWidth.bitWidthC))
 
   // register in front of control signals
   val io = IO(new Bundle {

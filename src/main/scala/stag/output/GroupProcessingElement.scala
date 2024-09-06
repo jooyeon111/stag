@@ -1,36 +1,36 @@
 package stag.output
 
 import chisel3._
-import stag.common.PortConfig
+import stag.common.PortBitWidth
 
-class GroupProcessingElement(vectorPeRow: Int, vectorPeCol: Int, numPeMultiplier: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
+class GroupProcessingElement(vectorPeRow: Int, vectorPeCol: Int, numPeMultiplier: Int, flagInputC: Boolean, portBitWidth: PortBitWidth) extends Module {
 
   val numInputA: Int = numPeMultiplier * vectorPeRow
   val numInputB: Int = numPeMultiplier * vectorPeCol
   val numProcessingElement = vectorPeRow * vectorPeCol
 
   val vectorProcessingElementVector: Vector[Vector[VectorProcessingElement]] =
-    Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portConfig)))
+    Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portBitWidth)))
 
-  val registerOutputA = RegInit(VecInit(Seq.fill(numInputA)(0.S(portConfig.bitWidthA.W))))
-  val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(0.S(portConfig.bitWidthB.W))))
-  val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(0.S(portConfig.bitWidthC.W))))
+  val registerOutputA = RegInit(VecInit(Seq.fill(numInputA)(0.S(portBitWidth.bitWidthA.W))))
+  val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(0.S(portBitWidth.bitWidthB.W))))
+  val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(0.S(portBitWidth.bitWidthC.W))))
 
   val io = IO(new Bundle {
 
     //Input
-    val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W) ))
-    val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W) ))
-    val inputC: Option[Vec[SInt]] = if(flagInputC) Some(Input(Input(Vec(numProcessingElement, SInt(portConfig.bitWidthC.W))))) else None
+    val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portBitWidth.bitWidthA.W) ))
+    val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portBitWidth.bitWidthB.W) ))
+    val inputC: Option[Vec[SInt]] = if(flagInputC) Some(Input(Input(Vec(numProcessingElement, SInt(portBitWidth.bitWidthC.W))))) else None
 
     //Control
     val propagateOutput: Option[Bool] = if(flagInputC) Some(Input(Bool())) else None
     val partialSumReset: Bool = Input(Bool())
 
     //Output
-    val outputA: Vec[SInt] = Output(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
-    val outputB: Vec[SInt] = Output(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
-    val outputC: Vec[SInt] = Output(Vec(numProcessingElement, SInt(portConfig.bitWidthC.W)))
+    val outputA: Vec[SInt] = Output(Vec(numInputA, SInt(portBitWidth.bitWidthA.W)))
+    val outputB: Vec[SInt] = Output(Vec(numInputB, SInt(portBitWidth.bitWidthB.W)))
+    val outputC: Vec[SInt] = Output(Vec(numProcessingElement, SInt(portBitWidth.bitWidthC.W)))
 
   })
 

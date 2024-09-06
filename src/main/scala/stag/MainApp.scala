@@ -4,7 +4,7 @@ import _root_.circt.stage.ChiselStage
 import stag.Dataflow._
 import stag.StaHierarchy._
 import stag.common.SystolicTensorArrayConfig
-import stag.common.PortConfig
+import stag.common.PortBitWidth
 
 import scala.util.{Failure, Success}
 
@@ -28,7 +28,7 @@ object MainApp extends App {
     case Success(config) =>
       val hierarchy = config.getString("Hierarchy").get match {
         case "sta" => StaHierarchy.sta
-        case "dimension_aligned_sta" => StaHierarchy.staPod
+        case "dimension_aligned_sta" => StaHierarchy.dimensionAlignedSta
         case _ =>
           Console.err.println("Invalid systolic tensor array hierarchy")
           sys.exit(1)
@@ -62,13 +62,13 @@ object MainApp extends App {
       assert(bandwidthPortC != -1, s"Cannot read bandwidth of port C in configuration file $fileName")
 
       val arrayConfig = SystolicTensorArrayConfig(r, c, a, b, p)
-      val portConfig = PortConfig(bandwidthPortA, bandwidthPortB, bandwidthPortC)
+      val portBitWidth = PortBitWidth(bandwidthPortA, bandwidthPortB, bandwidthPortC)
 
       hierarchy match {
         case StaHierarchy.sta =>
-          generateStaRtl(dataflow, arrayConfig, portConfig)
-        case StaHierarchy.staPod =>
-          generateSTaPodRtl(dataflow, arrayConfig, portConfig)
+          generateStaRtl(dataflow, arrayConfig, portBitWidth)
+        case StaHierarchy.dimensionAlignedSta =>
+          generateSTaPodRtl(dataflow, arrayConfig, portBitWidth)
       }
 
     case Failure(_) =>
@@ -77,43 +77,43 @@ object MainApp extends App {
 
   }
 
-  private def generateStaRtl(dataflow : Dataflow, arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig) = {
+  private def generateStaRtl(dataflow : Dataflow, arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth) = {
     val arrayConfigString: String = s"{${arrayConfig.groupPeRow}x${arrayConfig.groupPeCol}}x{${arrayConfig.vectorPeRow}x${arrayConfig.vectorPeCol}}x${arrayConfig.numPeMultiplier}"
     dataflow match {
       case Dataflow.Is =>
         ChiselStage.emitSystemVerilogFile(
-          new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+          new stag.input.SystolicTensorArray(arrayConfig, portBitWidth, generateRtl = true),
           firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_sta_"+ arrayConfigString +".sv")
         )
       case Dataflow.Os =>
         ChiselStage.emitSystemVerilogFile(
-          new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+          new stag.output.SystolicTensorArray(arrayConfig, portBitWidth, generateRtl = true),
           firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_sta_"+ arrayConfigString +".sv")
         )
       case Dataflow.Ws =>
         ChiselStage.emitSystemVerilogFile(
-          new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+          new stag.weight.SystolicTensorArray(arrayConfig, portBitWidth, generateRtl = true),
           firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_sta_"+ arrayConfigString +".sv")
         )
     }
   }
 
-  private def generateSTaPodRtl(dataflow: Dataflow, arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig) = {
+  private def generateSTaPodRtl(dataflow: Dataflow, arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth) = {
     val arrayConfigString: String = s"{${arrayConfig.groupPeRow}x${arrayConfig.groupPeCol}}x{${arrayConfig.vectorPeRow}x${arrayConfig.vectorPeCol}}x${arrayConfig.numPeMultiplier}"
     dataflow match {
       case Dataflow.Is =>
         ChiselStage.emitSystemVerilogFile(
-          new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+          new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portBitWidth),
           firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_dimension_aligned_sta_"+ arrayConfigString +".sv")
         )
       case Dataflow.Os =>
         ChiselStage.emitSystemVerilogFile(
-          new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+          new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portBitWidth),
           firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_dimension_aligned_sta_"+ arrayConfigString +".sv")
         )
       case Dataflow.Ws =>
         ChiselStage.emitSystemVerilogFile(
-          new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+          new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portBitWidth),
           firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_dimension_aligned_sta_"+ arrayConfigString +".sv")
         )
     }

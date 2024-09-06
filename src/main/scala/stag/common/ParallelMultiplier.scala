@@ -2,13 +2,13 @@ package stag.common
 
 import chisel3._
 
-class ParallelMultiplier(numPeMultiplier: Int, portConfig: PortConfig) extends Module {
+class ParallelMultiplier(numPeMultiplier: Int, portBitWidth: PortBitWidth) extends Module {
 
-  val outputPortBitwidth = portConfig.bitWidthA + portConfig.bitWidthB
+  val outputPortBitwidth = portBitWidth.bitWidthA + portBitWidth.bitWidthB
 
   val io = IO(new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portConfig.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portConfig.bitWidthB.W)))
+    val inputA: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthA.W)))
+    val inputB: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthB.W)))
     val output: Vec[SInt] = Output(Vec(numPeMultiplier, SInt(outputPortBitwidth.W)))
   })
 

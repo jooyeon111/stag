@@ -1,13 +1,13 @@
 package stag.output
 
 import chisel3._
-import stag.common.PortConfig
+import stag.common.PortBitWidth
 import stag.common.SystolicTensorArrayConfig
 
-class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorPeRow : Int, val vectorPeCol : Int, val numPeMultiplier : Int, portConfig: PortConfig, generateRtl: Boolean ) extends Module{
+class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorPeRow : Int, val vectorPeCol : Int, val numPeMultiplier : Int, portBitWidth: PortBitWidth, generateRtl: Boolean ) extends Module{
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig, generateRtl: Boolean) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, generateRtl)
+  def this(arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth, generateRtl: Boolean) =
+    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portBitWidth, generateRtl)
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
@@ -16,17 +16,17 @@ class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorP
 
   val groupProcessingElementVector: Vector[Vector[GroupProcessingElement]] =
     Vector.tabulate(groupPeRow, groupPeCol)( (x,y) => if( x == 0 || y == groupPeCol - 1){
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portBitWidth))
     } else {
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portBitWidth))
     })
 
   val io = IO(new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(numInputA,SInt(portConfig.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(numInputB,SInt(portConfig.bitWidthB.W)))
+    val inputA: Vec[SInt] = Input(Vec(numInputA,SInt(portBitWidth.bitWidthA.W)))
+    val inputB: Vec[SInt] = Input(Vec(numInputB,SInt(portBitWidth.bitWidthB.W)))
     val propagateOutput: Vec[Vec[Bool]] =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
     val partialSumReset: Vec[Vec[Bool]] =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
-    val outputC: Vec[SInt] = Output(Vec(numOutput,SInt(portConfig.bitWidthC.W)))
+    val outputC: Vec[SInt] = Output(Vec(numOutput,SInt(portBitWidth.bitWidthC.W)))
   })
 
   if(generateRtl){

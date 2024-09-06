@@ -2,11 +2,11 @@ package stag.common
 
 import chisel3._
 
-class AdderTree(numPeMultiplier: Int, portConfig: PortConfig) extends Module{
+class AdderTree(numPeMultiplier: Int, portBitWidth: PortBitWidth) extends Module{
 
   val io = IO(new Bundle {
-    val input: Vec[SInt] = Input(Vec(numPeMultiplier, SInt((portConfig.bitWidthA + portConfig.bitWidthB).W)))
-    val output: SInt = Output(SInt(portConfig.bitWidthC.W))
+    val input: Vec[SInt] = Input(Vec(numPeMultiplier, SInt((portBitWidth.bitWidthA + portBitWidth.bitWidthB).W)))
+    val output: SInt = Output(SInt(portBitWidth.bitWidthC.W))
   })
 
   if(numPeMultiplier == 1){

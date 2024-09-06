@@ -1,26 +1,26 @@
 package stag.weight
 
 import chisel3._
-import stag.common.PortConfig
+import stag.common.PortBitWidth
 import stag.common.Mac
 
-class VectorProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
+class VectorProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portBitWidth: PortBitWidth) extends Module {
 
-  val mac: Mac = Module(new Mac(peMultiplierCount, portConfig))
+  val mac: Mac = Module(new Mac(peMultiplierCount, portBitWidth))
 
   val io =  IO(new Bundle {
 
     //Input
-    val inputA: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portConfig.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portConfig.bitWidthB.W)))
-    val inputC: Option[SInt] = if(flagInputC) Some(Input(SInt(portConfig.bitWidthC.W))) else None
+    val inputA: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthA.W)))
+    val inputB: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthB.W)))
+    val inputC: Option[SInt] = if(flagInputC) Some(Input(SInt(portBitWidth.bitWidthC.W))) else None
 
     //Control
     val propagateB: Bool = Input(Bool())
 
     //Output
-    val outputB: Vec[SInt] = Output(Vec(peMultiplierCount, SInt(portConfig.bitWidthB.W)))
-    val outputC: SInt = Output(SInt(portConfig.bitWidthC.W))
+    val outputB: Vec[SInt] = Output(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthB.W)))
+    val outputC: SInt = Output(SInt(portBitWidth.bitWidthC.W))
 
   })
 
@@ -30,9 +30,9 @@ class VectorProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portC
   mac.io.inputB := io.inputB
 
   if(flagInputC)
-    io.outputC := RegNext(mac.io.output + io.inputC.get, 0.S(portConfig.bitWidthC.W))
+    io.outputC := RegNext(mac.io.output + io.inputC.get, 0.S(portBitWidth.bitWidthC.W))
   else
-    io.outputC := RegNext(mac.io.output, 0.S(portConfig.bitWidthC.W))
+    io.outputC := RegNext(mac.io.output, 0.S(portBitWidth.bitWidthC.W))
 
 
 }

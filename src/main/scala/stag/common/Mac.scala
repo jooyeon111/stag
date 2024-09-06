@@ -2,15 +2,15 @@ package stag.common
 
 import chisel3._
 
-class Mac(numPeMultiplier: Int, portConfig: PortConfig) extends Module {
+class Mac(numPeMultiplier: Int, portBitWidth: PortBitWidth) extends Module {
 
-  val multiplier = Module(new ParallelMultiplier(numPeMultiplier, portConfig))
-  val adderTree = Module(new AdderTree(numPeMultiplier, portConfig))
+  val multiplier = Module(new ParallelMultiplier(numPeMultiplier, portBitWidth))
+  val adderTree = Module(new AdderTree(numPeMultiplier, portBitWidth))
 
   val io = IO (new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portConfig.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portConfig.bitWidthB.W)))
-    val output: SInt = Output(SInt(portConfig.bitWidthC.W))
+    val inputA: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthA.W)))
+    val inputB: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthB.W)))
+    val output: SInt = Output(SInt(portBitWidth.bitWidthC.W))
   })
 
   multiplier.io.inputA := io.inputA

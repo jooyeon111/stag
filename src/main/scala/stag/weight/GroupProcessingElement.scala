@@ -1,32 +1,32 @@
 package stag.weight
 
 import chisel3._
-import stag.common.PortConfig
+import stag.common.PortBitWidth
 
-class GroupProcessingElement(vectorPeRow: Int, vectorPeCol: Int, peMultiplierCount: Int, flagInputC: Boolean, portConfig: PortConfig) extends Module {
+class GroupProcessingElement(vectorPeRow: Int, vectorPeCol: Int, peMultiplierCount: Int, flagInputC: Boolean, portBitWidth: PortBitWidth) extends Module {
 
   val numInputA: Int = peMultiplierCount * vectorPeRow
   val numInputB: Int = peMultiplierCount * vectorPeCol
   val numOutput: Int = vectorPeCol
 
   val vectorProcessingElementVector: Vector[Vector[VectorProcessingElement]] = if(flagInputC) {
-    Vector.fill(vectorPeRow, vectorPeCol)(Module(new VectorProcessingElement(peMultiplierCount, flagInputC = true, portConfig)))
+    Vector.fill(vectorPeRow, vectorPeCol)(Module(new VectorProcessingElement(peMultiplierCount, flagInputC = true, portBitWidth)))
   } else {
     Vector.tabulate(vectorPeRow, vectorPeCol)( (x,_) => if ( x == 0 ){
-      Module(new VectorProcessingElement(peMultiplierCount, flagInputC = false, portConfig))
+      Module(new VectorProcessingElement(peMultiplierCount, flagInputC = false, portBitWidth))
     } else {
-      Module(new VectorProcessingElement(peMultiplierCount, flagInputC = true, portConfig))
+      Module(new VectorProcessingElement(peMultiplierCount, flagInputC = true, portBitWidth))
     })
   }
 
   val io = IO(new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
-    val inputC: Option[Vec[SInt]] = if( flagInputC ) Some( Input(Vec(numOutput, SInt(portConfig.bitWidthC.W)))) else None
+    val inputA: Vec[SInt] = Input(Vec(numInputA, SInt(portBitWidth.bitWidthA.W)))
+    val inputB: Vec[SInt] = Input(Vec(numInputB, SInt(portBitWidth.bitWidthB.W)))
+    val inputC: Option[Vec[SInt]] = if( flagInputC ) Some( Input(Vec(numOutput, SInt(portBitWidth.bitWidthC.W)))) else None
     val propagateB: Vec[Bool] = Input(Vec(vectorPeRow, Bool()))
-    val outputA: Vec[SInt] = Output(Vec(numInputA, SInt(portConfig.bitWidthA.W)))
-    val outputB: Vec[SInt] = Output(Vec(numInputB, SInt(portConfig.bitWidthB.W)))
-    val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portConfig.bitWidthC.W)))
+    val outputA: Vec[SInt] = Output(Vec(numInputA, SInt(portBitWidth.bitWidthA.W)))
+    val outputB: Vec[SInt] = Output(Vec(numInputB, SInt(portBitWidth.bitWidthB.W)))
+    val outputC: Vec[SInt] = Output(Vec(numOutput, SInt(portBitWidth.bitWidthC.W)))
   })
 
   //Wiring Input
