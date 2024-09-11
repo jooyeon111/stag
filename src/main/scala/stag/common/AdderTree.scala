@@ -1,9 +1,7 @@
 package stag.common
 
 import chisel3._
-import _root_.circt.stage.ChiselStage
 
-//TODO bit width of pipelined adder tree
 class AdderTree[InputType <: Data, OutputType <: Data](
   numPeMultiplier: Int,
   inputType: InputType,

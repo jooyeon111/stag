@@ -20,3 +20,5 @@ class ParallelMultiplier[InputTypeA <: Data, InputTypeB <: Data, OutputType <: D
     io.output(i) := RegNext(ev.multiply(io.inputA(i), io.inputB(i)), ev.zero(outputType))
 
 }
+
+

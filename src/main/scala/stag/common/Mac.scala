@@ -2,15 +2,22 @@ package stag.common
 
 import chisel3._
 
-class Mac(numPeMultiplier: Int, portBitWidth: PortBitWidth) extends Module {
+class Mac[InputTypeA <: Data, InputTypeB <: Data, MultOutputType <: Data, AdderOutputType <: Data](
+  numPeMultiplier: Int,
+  inputTypeA: InputTypeA,
+  inputTypeB: InputTypeB,
+)( implicit
+  evMult: MultiplierOperation[InputTypeA, InputTypeB, MultOutputType],
+  evAdd: AdderTreeOperation[MultOutputType, AdderOutputType]
+) extends Module {
 
-  val multiplier = Module(new ParallelMultiplier(numPeMultiplier, SInt(8.W), SInt(8.W)))
-  val adderTree = Module(new AdderTree(numPeMultiplier, SInt(16.W)))
+  val multiplier = Module(new ParallelMultiplier(numPeMultiplier, inputTypeA, inputTypeB))
+  val adderTree = Module(new AdderTree(numPeMultiplier, evMult.getOutputType(inputTypeA, inputTypeB)))
 
   val io = IO (new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthB.W)))
-    val output: SInt = Output(SInt(portBitWidth.bitWidthC.W))
+    val inputA = Input(Vec(numPeMultiplier, inputTypeA))
+    val inputB = Input(Vec(numPeMultiplier, inputTypeB))
+    val output = Output(evAdd.getOutputType(Seq.fill(numPeMultiplier)(evMult.getOutputType(inputTypeA, inputTypeB))))
   })
 
   multiplier.io.inputA := io.inputA
