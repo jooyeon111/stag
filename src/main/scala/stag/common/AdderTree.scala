@@ -1,21 +1,21 @@
 package stag.common
 
 import chisel3._
+import _root_.circt.stage.ChiselStage
 
-class AdderTree(numPeMultiplier: Int, portBitWidth: PortBitWidth) extends Module{
+//TODO bit width of pipelined adder tree
+class AdderTree[InputType <: Data, OutputType <: Data](
+  numPeMultiplier: Int,
+  inputType: InputType,
+)(implicit ev: AdderTreeOperation[InputType, OutputType]) extends Module{
+
+  val outputType = ev.getOutputType(Seq.fill(numPeMultiplier)(inputType))
 
   val io = IO(new Bundle {
-    val input: Vec[SInt] = Input(Vec(numPeMultiplier, SInt((portBitWidth.bitWidthA + portBitWidth.bitWidthB).W)))
-    val output: SInt = Output(SInt(portBitWidth.bitWidthC.W))
+    val input = Input(Vec(numPeMultiplier, inputType))
+    val output = Output(outputType)
   })
 
-  if(numPeMultiplier == 1){
-    io.output := io.input(0)
-  } else {
-    io.output := io.input.reduceTree(
-      (a,b) => RegNext(a +& b, 0.S),
-      a => RegNext(a, 0.S)
-    )
-  }
+  io.output := io.input.reduceTree( (input0 , input1 ) => RegNext(ev.add(input0, input1)))
 
 }

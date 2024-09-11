@@ -5,7 +5,7 @@ import chisel3._
 class Mac(numPeMultiplier: Int, portBitWidth: PortBitWidth) extends Module {
 
   val multiplier = Module(new ParallelMultiplier(numPeMultiplier, SInt(8.W), SInt(8.W)))
-  val adderTree = Module(new AdderTree(numPeMultiplier, portBitWidth))
+  val adderTree = Module(new AdderTree(numPeMultiplier, SInt(16.W)))
 
   val io = IO (new Bundle {
     val inputA: Vec[SInt] = Input(Vec(numPeMultiplier, SInt(portBitWidth.bitWidthA.W)))
