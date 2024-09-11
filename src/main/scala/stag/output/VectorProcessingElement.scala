@@ -1,19 +1,27 @@
 package stag.output
 
 import chisel3._
-import stag.common.PortBitWidth
-import stag.common.Mac
+import stag.common.{AdderTreeOperation, Mac, MultiplierOperation}
 
-class VectorProcessingElement(peMultiplierCount: Int, portBitWidth: PortBitWidth) extends Module {
+class VectorProcessingElement[InputTypeA <: Data, InputTypeB <: Data, MultOutputType <: Data, AdderOutputType <: Data, OutputTypeC <: Data](
+  peMultiplierCount: Int,
+  inputTypeA: InputTypeA,
+  inputTypeB: InputTypeB,
+  outputTypeC: OutputTypeC
+)( implicit
+  evMult: MultiplierOperation[InputTypeA, InputTypeB, MultOutputType],
+  evAdd: AdderTreeOperation[MultOutputType, AdderOutputType],
+  evPe: ProcessingElementOperation[InputTypeA, InputTypeB, AdderOutputType, OutputTypeC]
+) extends Module {
 
-  val mac: Mac = Module(new Mac(peMultiplierCount, portBitWidth))
-  val outputRegister = RegInit(0.S(portBitWidth.bitWidthC.W))
+  val mac= Module(new Mac(peMultiplierCount, inputTypeA, inputTypeB))
+  val outputRegister = RegInit(evPe.zero)
 
   val io = IO(new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthB.W)))
+    val inputA = Input(Vec(peMultiplierCount, inputTypeA))
+    val inputB = Input(Vec(peMultiplierCount, inputTypeB))
     val partialSumReset: Bool = Input(Bool())
-    val output: SInt = Output(SInt(portBitWidth.bitWidthC.W))
+    val output = Output(outputTypeC)
   })
 
   //Wiring input
@@ -21,7 +29,7 @@ class VectorProcessingElement(peMultiplierCount: Int, portBitWidth: PortBitWidth
   mac.io.inputB := io.inputB
 
   //Wiring control and output
-  outputRegister := mac.io.output + Mux(io.partialSumReset, 0.S, outputRegister)
+  outputRegister := evPe.add(mac.io.output, Mux(io.partialSumReset, evPe.zero, outputRegister))
   io.output := outputRegister
 
 }

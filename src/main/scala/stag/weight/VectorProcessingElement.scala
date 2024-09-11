@@ -6,7 +6,8 @@ import stag.common.Mac
 
 class VectorProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portBitWidth: PortBitWidth) extends Module {
 
-  val mac: Mac = Module(new Mac(peMultiplierCount, portBitWidth))
+  //TODO fix it later just temporal code to prevent an error
+  val mac: Mac[SInt, SInt, SInt, SInt] = Module(new Mac(peMultiplierCount, SInt(8.W), SInt(8.W)))
 
   val io =  IO(new Bundle {
 
