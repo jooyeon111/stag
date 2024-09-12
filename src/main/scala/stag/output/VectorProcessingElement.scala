@@ -1,35 +1,26 @@
 package stag.output
 
 import chisel3._
-import stag.common.{AdderTreeOperation, Mac, MultiplierOperation}
+import stag.common.{ Mac, PortConfig, Arithmetic}
 
-class VectorProcessingElement[InputTypeA <: Data, InputTypeB <: Data, MultOutputType <: Data, AdderOutputType <: Data, OutputTypeC <: Data](
+class VectorProcessingElement[T <: Data](
   peMultiplierCount: Int,
-  inputTypeA: InputTypeA,
-  inputTypeB: InputTypeB,
-  outputTypeC: OutputTypeC
-)( implicit
-  evMult: MultiplierOperation[InputTypeA, InputTypeB, MultOutputType],
-  evAdd: AdderTreeOperation[MultOutputType, AdderOutputType],
-  evPe: ProcessingElementOperation[InputTypeA, InputTypeB, AdderOutputType, OutputTypeC]
-) extends Module {
+  portConfig: PortConfig[T],
+)( implicit ev: Arithmetic[T] ) extends Module {
 
-  val mac= Module(new Mac(peMultiplierCount, inputTypeA, inputTypeB))
-  val outputRegister = RegInit(evPe.zero)
+  val mac= Module(new Mac(peMultiplierCount, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val outputRegister = RegInit(ev.zero(portConfig.outputTypeC.getWidth))
 
   val io = IO(new Bundle {
-    val inputA = Input(Vec(peMultiplierCount, inputTypeA))
-    val inputB = Input(Vec(peMultiplierCount, inputTypeB))
+    val inputA = Input(Vec(peMultiplierCount, portConfig.inputTypeA))
+    val inputB = Input(Vec(peMultiplierCount, portConfig.inputTypeB))
     val partialSumReset: Bool = Input(Bool())
-    val output = Output(outputTypeC)
+    val output = Output(portConfig.outputTypeC)
   })
 
-  //Wiring input
   mac.io.inputA := io.inputA
   mac.io.inputB := io.inputB
-
-  //Wiring control and output
-  outputRegister := evPe.add(mac.io.output, Mux(io.partialSumReset, evPe.zero, outputRegister))
+  outputRegister := ev.add(mac.io.output, Mux(io.partialSumReset, ev.zero(portConfig.outputTypeC.getWidth), outputRegister))
   io.output := outputRegister
 
 }

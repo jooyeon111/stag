@@ -2,12 +2,11 @@ package stag.common
 
 import chisel3._
 
-class AdderTree[InputType <: Data, OutputType <: Data](
+class AdderTree[T <: Data](
   numPeMultiplier: Int,
-  inputType: InputType,
-)(implicit ev: AdderTreeOperation[InputType, OutputType]) extends Module{
-
-  val outputType = ev.getOutputType(Seq.fill(numPeMultiplier)(inputType))
+  inputType: T,
+  outputType: T
+)(implicit ev: Arithmetic[T]) extends Module{
 
   val io = IO(new Bundle {
     val input = Input(Vec(numPeMultiplier, inputType))

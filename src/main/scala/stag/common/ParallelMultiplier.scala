@@ -2,13 +2,12 @@ package stag.common
 
 import chisel3._
 
-class ParallelMultiplier[InputTypeA <: Data, InputTypeB <: Data, OutputType <: Data](
+class ParallelMultiplier[T <: Data](
   numPeMultiplier: Int,
-  inputTypeA: InputTypeA,
-  inputTypeB: InputTypeB,
-)(implicit ev: MultiplierOperation[InputTypeA, InputTypeB, OutputType]) extends Module {
-
-  private val outputType = ev.getOutputType(inputTypeA, inputTypeB)
+  inputTypeA: T,
+  inputTypeB: T,
+  outputType: T
+)(implicit ev: Arithmetic[T]) extends Module {
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numPeMultiplier, inputTypeA ))
@@ -17,7 +16,7 @@ class ParallelMultiplier[InputTypeA <: Data, InputTypeB <: Data, OutputType <: D
   })
 
   for(i <- 0 until numPeMultiplier)
-    io.output(i) := RegNext(ev.multiply(io.inputA(i), io.inputB(i)), ev.zero(outputType))
+    io.output(i) := RegNext(ev.multiply(io.inputA(i), io.inputB(i)), ev.zero(outputType.getWidth))
 
 }
 

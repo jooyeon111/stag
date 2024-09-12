@@ -3,6 +3,7 @@ rtl:
 	sbt "runMain stag.MainApp output_stationary.cfg"
 	sbt "runMain stag.MainApp weight_stationary.cfg"
 
+
 test:
 	sbt "test"
 

@@ -1,32 +1,47 @@
 package stag.output
 
 import chisel3._
-import stag.common.PortBitWidth
-import stag.common.SystolicTensorArrayConfig
+import _root_.circt.stage.ChiselStage
+import stag.common.{ PortConfig, SystolicTensorArrayConfig, Arithmetic}
 
-class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorPeRow : Int, val vectorPeCol : Int, val numPeMultiplier : Int, portBitWidth: PortBitWidth, generateRtl: Boolean ) extends Module{
+class SystolicTensorArray[T <: Data](
+  groupPeRow: Int,
+  groupPeCol : Int,
+  vectorPeRow : Int,
+  vectorPeCol : Int,
+  numPeMultiplier : Int,
+  portConfig: PortConfig[T],
+  generateRtl: Boolean
+)( implicit ev: Arithmetic[T] ) extends Module{
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth, generateRtl: Boolean) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portBitWidth, generateRtl)
+  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) = this(
+      arrayConfig.groupPeRow,
+      arrayConfig.groupPeCol,
+      arrayConfig.vectorPeRow,
+      arrayConfig.vectorPeCol,
+      arrayConfig.numPeMultiplier,
+      portConfig,
+      generateRtl
+    )
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numProcessingElemnt = vectorPeRow * vectorPeCol
   val numOutput: Int = (groupPeCol + groupPeRow - 1) * numProcessingElemnt
 
-  val groupProcessingElementVector: Vector[Vector[GroupProcessingElement]] =
+  val groupProcessingElementVector =
     Vector.tabulate(groupPeRow, groupPeCol)( (x,y) => if( x == 0 || y == groupPeCol - 1){
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portBitWidth))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false,  portConfig))
     } else {
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portBitWidth))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
     })
 
   val io = IO(new Bundle {
-    val inputA: Vec[SInt] = Input(Vec(numInputA,SInt(portBitWidth.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(numInputB,SInt(portBitWidth.bitWidthB.W)))
-    val propagateOutput: Vec[Vec[Bool]] =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
-    val partialSumReset: Vec[Vec[Bool]] =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
-    val outputC: Vec[SInt] = Output(Vec(numOutput,SInt(portBitWidth.bitWidthC.W)))
+    val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
+    val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
+    val propagateOutput =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
+    val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
+    val outputC = Output(Vec(numOutput, portConfig.outputTypeC))
   })
 
   if(generateRtl){
@@ -36,7 +51,7 @@ class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorP
       for( a <- 0 until vectorPeRow )
         for( p <- 0 until numPeMultiplier ) {
           val multiplierIndex = a * numPeMultiplier + p
-          groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), 0.S )
+          groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), ev.zero(portConfig.inputTypeA.getWidth))
         }
 
     //Wiring B
@@ -44,7 +59,7 @@ class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorP
       for( b <- 0 until vectorPeCol)
         for (p <- 0 until numPeMultiplier) {
           val multiplierIndex = b * numPeMultiplier + p
-          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier )), 0.S )
+          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier )), ev.zero(portConfig.inputTypeB.getWidth) )
         }
 
     //Wiring propagate signal
@@ -130,6 +145,5 @@ class SystolicTensorArray(val groupPeRow: Int, val groupPeCol : Int, val vectorP
 
     }
   }
-
 
 }

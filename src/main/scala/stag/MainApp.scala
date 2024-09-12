@@ -2,9 +2,10 @@ package stag
 
 import _root_.circt.stage.ChiselStage
 import stag.Dataflow._
-import stag.StaHierarchy._
-import stag.common.SystolicTensorArrayConfig
-import stag.common.PortBitWidth
+import stag.IntegerType._
+import stag.common.{PortConfig, SystolicTensorArrayConfig}
+import chisel3._
+import chisel3.util.log2Ceil
 
 import scala.util.{Failure, Success}
 
@@ -46,6 +47,15 @@ object MainApp extends App {
       val a = config.getInt("A").getOrElse(-1)
       val b = config.getInt("B").getOrElse(-1)
       val p = config.getInt("P").getOrElse(-1)
+
+      val integerType = config.getString("Port Type").get match {
+        case "Unsigned" => IntegerType.unSigned
+        case "Signed" => IntegerType.signed
+        case _ =>
+          Console.err.println("Invalid integer type")
+          sys.exit(1)
+      }
+
       val bandwidthPortA = config.getInt("Port A").getOrElse(-1)
       val bandwidthPortB = config.getInt("Port B").getOrElse(-1)
       val bandwidthPortC = config.getInt("Port C").getOrElse(-1)
@@ -66,9 +76,9 @@ object MainApp extends App {
 
       hierarchy match {
         case StaHierarchy.sta =>
-          generateStaRtl(dataflow, arrayConfig, portBitWidth)
+          generateStaRtl(dataflow, arrayConfig, portBitWidth, integerType)
         case StaHierarchy.dimensionAlignedSta =>
-          generateSTaPodRtl(dataflow, arrayConfig, portBitWidth)
+          generateSTaPodRtl(dataflow, arrayConfig, portBitWidth, integerType)
       }
 
     case Failure(_) =>
@@ -77,46 +87,106 @@ object MainApp extends App {
 
   }
 
-  private def generateStaRtl(dataflow : Dataflow, arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth) = {
+  private def generateStaRtl(dataflow : Dataflow, arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth, integerType: IntegerType) = {
     val arrayConfigString: String = s"{${arrayConfig.groupPeRow}x${arrayConfig.groupPeCol}}x{${arrayConfig.vectorPeRow}x${arrayConfig.vectorPeCol}}x${arrayConfig.numPeMultiplier}"
-    dataflow match {
-      case Dataflow.Is =>
-        ChiselStage.emitSystemVerilogFile(
-          new stag.input.SystolicTensorArray(arrayConfig, portBitWidth, generateRtl = true),
-          firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_sta_"+ arrayConfigString +".sv")
-        )
-      case Dataflow.Os =>
-        ChiselStage.emitSystemVerilogFile(
-          new stag.output.SystolicTensorArray(arrayConfig, portBitWidth, generateRtl = true),
-          firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_sta_"+ arrayConfigString +".sv")
-        )
-      case Dataflow.Ws =>
-        ChiselStage.emitSystemVerilogFile(
-          new stag.weight.SystolicTensorArray(arrayConfig, portBitWidth, generateRtl = true),
-          firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_sta_"+ arrayConfigString +".sv")
-        )
+
+    integerType match {
+      case IntegerType.signed =>
+        val multiplierOutputType = SInt((portBitWidth.bitWidthA + portBitWidth.bitWidthB).W)
+        val adderTreeOutputTypeType = SInt((multiplierOutputType.getWidth + log2Ceil(arrayConfig.numPeMultiplier)).W)
+        val portConfig = PortConfig(SInt(portBitWidth.bitWidthA.W), SInt(portBitWidth.bitWidthB.W), multiplierOutputType, adderTreeOutputTypeType, SInt(portBitWidth.bitWidthC.W))
+        dataflow match {
+          case Dataflow.Is =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_sta_"+ arrayConfigString +".sv")
+            )
+          case Dataflow.Os =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_sta_"+ arrayConfigString +".sv")
+            )
+          case Dataflow.Ws =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_sta_"+ arrayConfigString +".sv")
+            )
+        }
+      case IntegerType.unSigned =>
+        val multiplierOutputType = UInt((portBitWidth.bitWidthA + portBitWidth.bitWidthB).W)
+        val adderTreeOutputTypeType = UInt((multiplierOutputType.getWidth + log2Ceil(arrayConfig.numPeMultiplier)).W)
+        val portConfig = PortConfig(UInt(portBitWidth.bitWidthA.W), UInt(portBitWidth.bitWidthB.W), multiplierOutputType, adderTreeOutputTypeType, UInt(portBitWidth.bitWidthC.W))
+        dataflow match {
+          case Dataflow.Is =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_sta_"+ arrayConfigString +".sv")
+            )
+          case Dataflow.Os =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_sta_"+ arrayConfigString +".sv")
+            )
+          case Dataflow.Ws =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_sta_"+ arrayConfigString +".sv")
+            )
+        }
+      case _ =>
+        Console.err.println("Invalid integer type")
+        sys.exit(1)
     }
   }
 
-  private def generateSTaPodRtl(dataflow: Dataflow, arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth) = {
+  private def generateSTaPodRtl(dataflow: Dataflow, arrayConfig: SystolicTensorArrayConfig, portBitWidth: PortBitWidth, integerType: IntegerType) = {
     val arrayConfigString: String = s"{${arrayConfig.groupPeRow}x${arrayConfig.groupPeCol}}x{${arrayConfig.vectorPeRow}x${arrayConfig.vectorPeCol}}x${arrayConfig.numPeMultiplier}"
-    dataflow match {
-      case Dataflow.Is =>
-        ChiselStage.emitSystemVerilogFile(
-          new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portBitWidth),
-          firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_dimension_aligned_sta_"+ arrayConfigString +".sv")
-        )
-      case Dataflow.Os =>
-        ChiselStage.emitSystemVerilogFile(
-          new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portBitWidth),
-          firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_dimension_aligned_sta_"+ arrayConfigString +".sv")
-        )
-      case Dataflow.Ws =>
-        ChiselStage.emitSystemVerilogFile(
-          new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portBitWidth),
-          firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_dimension_aligned_sta_"+ arrayConfigString +".sv")
-        )
+    integerType match {
+      case IntegerType.signed =>
+        val multiplierOutputType = SInt((portBitWidth.bitWidthA + portBitWidth.bitWidthB).W)
+        val adderTreeOutputTypeType = SInt((multiplierOutputType.getWidth + log2Ceil(arrayConfig.numPeMultiplier)).W)
+        val portConfig = PortConfig(SInt(portBitWidth.bitWidthA.W), SInt(portBitWidth.bitWidthB.W), multiplierOutputType, adderTreeOutputTypeType, SInt(portBitWidth.bitWidthC.W))
+        dataflow match {
+          case Dataflow.Is =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/dimension_aligned_is_sta_" + arrayConfigString + ".sv")
+            )
+          case Dataflow.Os =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/dimension_aligned_os_sta_" + arrayConfigString + ".sv")
+            )
+          case Dataflow.Ws =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/dimension_aligned_ws_sta_" + arrayConfigString + ".sv")
+            )
+        }
+      case IntegerType.unSigned =>
+        val multiplierOutputType = UInt((portBitWidth.bitWidthA + portBitWidth.bitWidthB).W)
+        val adderTreeOutputTypeType = UInt((multiplierOutputType.getWidth + log2Ceil(arrayConfig.numPeMultiplier)).W)
+        val portConfig = PortConfig(UInt(portBitWidth.bitWidthA.W), UInt(portBitWidth.bitWidthB.W), multiplierOutputType, adderTreeOutputTypeType, UInt(portBitWidth.bitWidthC.W))
+        dataflow match {
+          case Dataflow.Is =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/is_sta_" + arrayConfigString + ".sv")
+            )
+          case Dataflow.Os =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/os_sta_" + arrayConfigString + ".sv")
+            )
+          case Dataflow.Ws =>
+            ChiselStage.emitSystemVerilogFile(
+              new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig),
+              firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/ws_sta_" + arrayConfigString + ".sv")
+            )
+        }
+      case _ =>
+        Console.err.println("Invalid integer type")
+        sys.exit(1)
     }
   }
-
 }

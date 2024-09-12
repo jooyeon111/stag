@@ -1,39 +1,41 @@
 package stag.weight
 
 import chisel3._
-import stag.common.PortBitWidth
-import stag.common.Mac
+import stag.common.{Arithmetic, Mac, PortConfig}
 
-class VectorProcessingElement(peMultiplierCount: Int, flagInputC: Boolean, portBitWidth: PortBitWidth) extends Module {
+class VectorProcessingElement[T <: Data](
+  peMultiplierCount: Int,
+  flagInputC: Boolean,
+  portConfig: PortConfig[T],
+)( implicit ev: Arithmetic[T] ) extends Module {
 
-  //TODO fix it later just temporal code to prevent an error
-  val mac: Mac[SInt, SInt, SInt, SInt] = Module(new Mac(peMultiplierCount, SInt(8.W), SInt(8.W)))
+  val mac = Module(new Mac(peMultiplierCount, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
 
   val io =  IO(new Bundle {
 
     //Input
-    val inputA: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthA.W)))
-    val inputB: Vec[SInt] = Input(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthB.W)))
-    val inputC: Option[SInt] = if(flagInputC) Some(Input(SInt(portBitWidth.bitWidthC.W))) else None
+    val inputA = Input(Vec(peMultiplierCount, portConfig.inputTypeA))
+    val inputB = Input(Vec(peMultiplierCount, portConfig.inputTypeB))
+    val inputC = if(flagInputC) Some(Input(portConfig.outputTypeC)) else None
 
     //Control
     val propagateB: Bool = Input(Bool())
 
     //Output
-    val outputB: Vec[SInt] = Output(Vec(peMultiplierCount, SInt(portBitWidth.bitWidthB.W)))
-    val outputC: SInt = Output(SInt(portBitWidth.bitWidthC.W))
+    val outputB = Output(Vec(peMultiplierCount, portConfig.inputTypeB))
+    val outputC = Output(portConfig.outputTypeC)
 
   })
 
-  io.outputB := RegNext(Mux(io.propagateB, io.inputB, io.outputB), VecInit.fill(peMultiplierCount)(0.S))
+  io.outputB := RegNext(Mux(io.propagateB, io.inputB, io.outputB), VecInit.fill(peMultiplierCount)(ev.zero(portConfig.inputTypeB.getWidth)))
 
   mac.io.inputA := io.inputA
   mac.io.inputB := io.inputB
 
   if(flagInputC)
-    io.outputC := RegNext(mac.io.output + io.inputC.get, 0.S(portBitWidth.bitWidthC.W))
+    io.outputC := RegNext(ev.add(mac.io.output, io.inputC.get), ev.zero(portConfig.outputTypeC.getWidth))
   else
-    io.outputC := RegNext(mac.io.output, 0.S(portBitWidth.bitWidthC.W))
+    io.outputC := RegNext(mac.io.output, ev.zero(portConfig.outputTypeC.getWidth))
 
 
 }
