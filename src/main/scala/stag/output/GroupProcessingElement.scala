@@ -9,24 +9,25 @@ class GroupProcessingElement[T <: Data](
   numPeMultiplier: Int,
   flagInputC: Boolean,
   portConfig: PortConfig[T],
+  outputTypeC : T,
 )( implicit ev: Arithmetic[T]) extends Module {
 
   val numInputA: Int = numPeMultiplier * vectorPeRow
   val numInputB: Int = numPeMultiplier * vectorPeCol
   val numProcessingElement: Int = vectorPeRow * vectorPeCol
 
-  val vectorProcessingElementVector = Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portConfig)))
+  val vectorProcessingElementVector = Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portConfig, outputTypeC)))
 
   val registerOutputA = RegInit(VecInit(Seq.fill(numInputA)(ev.zero(portConfig.inputTypeA.getWidth))))
   val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(ev.zero(portConfig.inputTypeB.getWidth))))
-  val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(ev.zero(portConfig.outputTypeC.getWidth))))
+  val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(ev.zero(outputTypeC.getWidth))))
 
   val io = IO(new Bundle {
 
     //Input
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA ))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB ))
-    val inputC = if(flagInputC) Some(Input(Input(Vec(numProcessingElement, portConfig.outputTypeC)))) else None
+    val inputC = if(flagInputC) Some(Input(Input(Vec(numProcessingElement, outputTypeC)))) else None
 
     //Control
     val propagateOutput: Option[Bool] = if(flagInputC) Some(Input(Bool())) else None
@@ -35,7 +36,7 @@ class GroupProcessingElement[T <: Data](
     //Output
     val outputA = Output(Vec(numInputA, portConfig.inputTypeA))
     val outputB = Output(Vec(numInputB, portConfig.inputTypeB))
-    val outputC = Output(Vec(numProcessingElement, portConfig.outputTypeC))
+    val outputC = Output(Vec(numProcessingElement, outputTypeC))
 
   })
 

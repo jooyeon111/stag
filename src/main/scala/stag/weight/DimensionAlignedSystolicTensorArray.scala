@@ -19,11 +19,15 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateB: Int = groupPeRow * vectorPeRow
   val numOutput : Int = groupPeCol * vectorPeCol
+  val outputTypeC = portConfig.createOutputTypeC(
+    portConfig.adderTreeOutputTypeType.getWidth
+      + (groupPeRow * vectorPeRow)
+  )
 
   val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
   val preProcessorInputB = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = false, portConfig.inputTypeB))
   val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
-  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, portConfig.outputTypeC))
+  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, outputTypeC))
 
   // register in front of control signals
   val io = IO(new Bundle {

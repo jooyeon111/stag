@@ -1,7 +1,6 @@
 package stag.output
 
 import chisel3._
-import _root_.circt.stage.ChiselStage
 import stag.common.{ PortConfig, SystolicTensorArrayConfig, Arithmetic}
 
 class SystolicTensorArray[T <: Data](
@@ -11,16 +10,18 @@ class SystolicTensorArray[T <: Data](
   vectorPeCol : Int,
   numPeMultiplier : Int,
   portConfig: PortConfig[T],
+  outputTypeC: T,
   generateRtl: Boolean
 )( implicit ev: Arithmetic[T] ) extends Module{
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) = this(
+  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], outputPortType : T, generateRtl: Boolean)(implicit ev: Arithmetic[T]) = this(
       arrayConfig.groupPeRow,
       arrayConfig.groupPeCol,
       arrayConfig.vectorPeRow,
       arrayConfig.vectorPeCol,
       arrayConfig.numPeMultiplier,
       portConfig,
+      outputPortType,
       generateRtl
     )
 
@@ -31,9 +32,9 @@ class SystolicTensorArray[T <: Data](
 
   val groupProcessingElementVector =
     Vector.tabulate(groupPeRow, groupPeCol)( (x,y) => if( x == 0 || y == groupPeCol - 1){
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false,  portConfig))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false,  portConfig, outputTypeC))
     } else {
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig, outputTypeC))
     })
 
   val io = IO(new Bundle {
@@ -41,7 +42,7 @@ class SystolicTensorArray[T <: Data](
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
     val propagateOutput =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
     val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
-    val outputC = Output(Vec(numOutput, portConfig.outputTypeC))
+    val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
   if(generateRtl){

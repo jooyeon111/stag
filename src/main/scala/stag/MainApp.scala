@@ -24,9 +24,12 @@ object MainApp extends App {
     val Sta, DimensionAlignedSta, StaEngine = Value
   }
 
-  case class InputPortBitWidth (
+  case class PortBitWidthInfo(
     bitWidthPortA: Int,
-    bitWidthPortB: Int
+    bitWidthPortB: Int,
+    bitWidthMultiplierOutput: Int,
+    bitWidthAdderTreeOutput: Int,
+    bitWidthPortC: Int
   )
 
   case class AppConfig (
@@ -34,7 +37,7 @@ object MainApp extends App {
     dataflow: Dataflow.Value,
     arrayConfig: SystolicTensorArrayConfig,
     integerType: IntegerType.Value,
-    portBitWidth: InputPortBitWidth,
+    portBitWidthInfo: PortBitWidthInfo
   )
 
   def parseArgs(args: Array[String]): Either[String, String] = {
@@ -76,61 +79,76 @@ object MainApp extends App {
         sys.exit(1)
     }
 
-    val inputPortBitWidth = InputPortBitWidth(
-      config.getInt("Port A").get,
-      config.getInt("Port B").get,
+    val bitWidthPortA = config.getInt("Port A").get
+    val bitWidthPortB = config.getInt("Port B").get
+    val bitWidthMultiplierOutput = bitWidthPortA + bitWidthPortB
+    val bitWidthAdderTreeOutput = bitWidthMultiplierOutput + log2Ceil(arrayConfig.numPeMultiplier)
+    val bitWidthPortC = dataflow match {
+      case Dataflow.Is => bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeCol * arrayConfig.vectorPeCol
+      case Dataflow.Os => config.getInt("Port C").get
+      case Dataflow.Ws => bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeRow * arrayConfig.vectorPeRow
+      case _ => throw new IllegalArgumentException("Invalid dataflow")
+    }
+
+    val portBitWidthInfo = PortBitWidthInfo(
+      bitWidthPortA,
+      bitWidthPortB,
+      bitWidthMultiplierOutput,
+      bitWidthAdderTreeOutput,
+      bitWidthPortC
     )
 
-    AppConfig(hierarchy = hierarchy, dataflow = dataflow, arrayConfig = arrayConfig, integerType = integerType, portBitWidth = inputPortBitWidth)
+
+    AppConfig(hierarchy = hierarchy, dataflow = dataflow, arrayConfig = arrayConfig, integerType = integerType, portBitWidthInfo = portBitWidthInfo)
+
   }
 
 
   def generateRtl(appConfig: AppConfig): Unit = {
-    val AppConfig(hierarchy, dataflow, arrayConfig, integerType, portBitWidth) = appConfig
+    val AppConfig(hierarchy, dataflow, arrayConfig, integerType, portBitWidthInfo) = appConfig
     val arrayConfigString = s"{${arrayConfig.groupPeRow}x${arrayConfig.groupPeCol}}x{${arrayConfig.vectorPeRow}x${arrayConfig.vectorPeCol}}x${arrayConfig.numPeMultiplier}"
 
     integerType match {
       case IntegerType.Signed =>
-        generateRtlForType[SInt](arrayConfig, portBitWidth, hierarchy, dataflow, arrayConfigString, (w:Int) => SInt(w.W))
+        generateRtlForType[SInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, arrayConfigString, (w:Int) => SInt(w.W))
       case IntegerType.UnSigned =>
-        generateRtlForType[UInt](arrayConfig, portBitWidth, hierarchy, dataflow, arrayConfigString, (w:Int) => UInt(w.W))
+        generateRtlForType[UInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, arrayConfigString, (w:Int) => UInt(w.W))
     }
   }
 
   def generateRtlForType[T <: Data](
      arrayConfig: SystolicTensorArrayConfig,
-     portBitWidth: InputPortBitWidth,
+     portBitWidthInfo: PortBitWidthInfo,
      hierarchy: StaHierarchy.Value,
      dataflow: Dataflow.Value,
      arrayConfigString: String,
      typeConstructor: Int => T
    )(implicit ev: Arithmetic[T]): Unit = {
 
-    val inputTypeA = typeConstructor(portBitWidth.bitWidthPortA)
-    val inputTypeB = typeConstructor(portBitWidth.bitWidthPortB)
-    val multiplierOutputType = typeConstructor(portBitWidth.bitWidthPortA + portBitWidth.bitWidthPortB)
-    val adderTreeOutputType = typeConstructor(portBitWidth.bitWidthPortA + portBitWidth.bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier))
-    val outputTypeC = typeConstructor(32)
+    val inputTypeA = typeConstructor(portBitWidthInfo.bitWidthPortA)
+    val inputTypeB = typeConstructor(portBitWidthInfo.bitWidthPortB)
+    val multiplierOutputType = typeConstructor(portBitWidthInfo.bitWidthMultiplierOutput)
+    val adderTreeOutputType = typeConstructor(portBitWidthInfo.bitWidthAdderTreeOutput)
+    val outputTypeC = typeConstructor(portBitWidthInfo.bitWidthPortC)
 
     val portConfig = PortConfig(
       inputTypeA,
       inputTypeB,
       multiplierOutputType,
       adderTreeOutputType,
-      outputTypeC
     )
 
     lazy val rtlGenerator =  (hierarchy, dataflow) match {
       case (StaHierarchy.Sta, Dataflow.Is) =>
         new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
       case (StaHierarchy.Sta, Dataflow.Os) =>
-        new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
+        new stag.output.SystolicTensorArray(arrayConfig, portConfig, outputTypeC, generateRtl = true)
       case (StaHierarchy.Sta, Dataflow.Ws) =>
         new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Is) =>
         new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig)
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Os) =>
-        new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig)
+        new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig, outputTypeC)
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Ws) =>
         new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig)
     }

@@ -6,20 +6,24 @@ import stag.common.Arithmetic
 import stag.common.PortConfig
 
 class VectorProcessingElement[T <: Data](
+  groupPeColIndex: Int,
+  vectorPeColIndex: Int,
+  vectorPeCol: Int,
   peMultiplierCount: Int,
   flagInputC: Boolean,
   portConfig: PortConfig[T]
 )( implicit ev: Arithmetic[T] ) extends Module {
 
-  //TODO fix it later just temporal code to prevent an error
-  val mac = Module(new Mac(peMultiplierCount, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val outputTypeC = portConfig.createOutputTypeC(
+    portConfig.adderTreeOutputTypeType.getWidth + vectorPeColIndex + (groupPeColIndex * vectorPeCol)
+  )
 
   val io =  IO(new Bundle {
 
     //Input
     val inputA = Input(Vec(peMultiplierCount, portConfig.inputTypeA))
     val inputB = Input(Vec(peMultiplierCount, portConfig.inputTypeB))
-    val inputC = if(flagInputC) Some(Input(portConfig.outputTypeC)) else None
+    val inputC = if(flagInputC) Some(Input(outputTypeC)) else None
 
     //Control
     val propagateA: Bool = Input(Bool())
@@ -30,15 +34,17 @@ class VectorProcessingElement[T <: Data](
 
   })
 
+  val mac = Module(new Mac(peMultiplierCount, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+
   io.outputA := RegNext(Mux(io.propagateA, io.inputA, io.outputA), VecInit.fill(peMultiplierCount)(ev.zero(portConfig.inputTypeA.getWidth)))
 
   mac.io.inputA := io.inputA
   mac.io.inputB := io.inputB
 
   if(flagInputC)
-    io.outputC := RegNext(ev.add(mac.io.output, io.inputC.get), ev.zero(portConfig.outputTypeC.getWidth))
+    io.outputC := RegNext(ev.add(mac.io.output, io.inputC.get), ev.zero(outputTypeC.getWidth))
   else
-    io.outputC := RegNext(mac.io.output, ev.zero(portConfig.outputTypeC.getWidth))
+    io.outputC := RegNext(mac.io.output, ev.zero(outputTypeC.getWidth))
 
 
 }

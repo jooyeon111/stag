@@ -4,6 +4,7 @@ import chisel3._
 import stag.common.{PortConfig, Arithmetic}
 
 class GroupProcessingElement[T <: Data](
+  groupPeRowIndex: Int,
   vectorPeRow: Int,
   vectorPeCol: Int,
   peMultiplierCount: Int,
@@ -14,25 +15,30 @@ class GroupProcessingElement[T <: Data](
   val numInputA: Int = peMultiplierCount * vectorPeRow
   val numInputB: Int = peMultiplierCount * vectorPeCol
   val numOutput: Int = vectorPeCol
+  val outputTypeC = portConfig.createOutputTypeC(
+    portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeRowIndex * vectorPeCol)
+  )
 
   val vectorProcessingElementVector = if(flagInputC) {
-    Vector.fill(vectorPeRow, vectorPeCol)(Module(new VectorProcessingElement(peMultiplierCount, flagInputC = true, portConfig)))
+    Vector.tabulate(vectorPeRow, vectorPeCol)( (vectorPeRowIndex,_) => {
+      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, peMultiplierCount, flagInputC = true, portConfig))
+    })
   } else {
-    Vector.tabulate(vectorPeRow, vectorPeCol)( (x,_) => if ( x == 0 ){
-      Module(new VectorProcessingElement(peMultiplierCount, flagInputC = false, portConfig))
+    Vector.tabulate(vectorPeRow, vectorPeCol)( (vectorPeRowIndex,_) => if ( vectorPeRowIndex == 0 ){
+      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, peMultiplierCount, flagInputC = false, portConfig))
     } else {
-      Module(new VectorProcessingElement(peMultiplierCount, flagInputC = true, portConfig))
+      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, peMultiplierCount, flagInputC = true, portConfig))
     })
   }
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
-    val inputC = if( flagInputC ) Some( Input(Vec(numOutput, portConfig.outputTypeC))) else None
+    val inputC = if( flagInputC ) Some( Input(Vec(numOutput, outputTypeC))) else None
     val propagateB = Input(Vec(vectorPeRow, Bool()))
     val outputA = Output(Vec(numInputA, portConfig.inputTypeA))
     val outputB = Output(Vec(numInputB, portConfig.inputTypeB))
-    val outputC = Output(Vec(numOutput, portConfig.outputTypeC))
+    val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
   //Wiring Input

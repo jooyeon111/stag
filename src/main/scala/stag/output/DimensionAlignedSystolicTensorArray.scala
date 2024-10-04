@@ -10,11 +10,12 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   vectorPeRow : Int,
   vectorPeCol : Int,
   numPeMultiplier : Int,
-  portConfig: PortConfig[T]
+  portConfig: PortConfig[T],
+  outputTypeC: T
 )(implicit ev: Arithmetic[T]) extends Module {
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig)
+  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], outputPortType: T)(implicit ev: Arithmetic[T]) =
+    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, outputPortType)
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
@@ -22,15 +23,15 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
 
   val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
   val preProcessorInputB = Module (new PreProcessor(groupPeCol, vectorPeCol, numPeMultiplier, skewFlag = true, portConfig.inputTypeB))
-  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
-  val postProcessor = Module (new PostProcessor(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, portConfig.outputTypeC))
+  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, outputTypeC, generateRtl = false))
+  val postProcessor = Module (new DeskewBuffer(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, outputTypeC))
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
     val propagateOutput =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
     val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
-    val outputC = Output(Vec(numOutput, portConfig.outputTypeC))
+    val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
   //Wiring Input

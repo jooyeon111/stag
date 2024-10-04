@@ -20,18 +20,22 @@ class SystolicTensorArray[T <: Data](
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateA: Int = groupPeCol * vectorPeCol
   val numOutput : Int = groupPeRow * vectorPeRow
+  val outputTypeC = portConfig.createOutputTypeC(
+    portConfig.adderTreeOutputTypeType.getWidth
+      + (groupPeCol * vectorPeCol)
+  )
 
-  val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((_,y) => if ( y == 0 ) {
-    Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
+  val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((_, groupPeColIndex) => if ( groupPeColIndex == 0 ) {
+    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
   } else{
-    Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
   })
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
     val propagateA  = Input(Vec(numPropagateA, Bool()))
-    val outputC = Output(Vec(numOutput, portConfig.outputTypeC))
+    val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
   if(generateRtl){
