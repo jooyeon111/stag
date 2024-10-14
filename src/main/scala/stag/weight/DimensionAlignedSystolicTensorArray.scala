@@ -19,22 +19,22 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateB: Int = groupPeRow * vectorPeRow
   val numOutput : Int = groupPeCol * vectorPeCol
-  val outputTypeC = portConfig.createOutputTypeC(
-    portConfig.adderTreeOutputTypeType.getWidth
-      + (groupPeRow * vectorPeRow)
-  )
+//  val outputTypeC = portConfig.calculateOutputTypeC(
+//    portConfig.adderTreeOutputTypeType.getWidth
+//      + (groupPeRow * vectorPeRow)
+//  )
 
   val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
   val preProcessorInputB = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = false, portConfig.inputTypeB))
   val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
-  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, outputTypeC))
+  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, systolicTensorArray.outputTypeC))
 
   // register in front of control signals
   val io = IO(new Bundle {
-    val inputA = Input(Vec(numInputA, SInt(8.W)))
-    val inputB = Input(Vec(numInputB, SInt(8.W)))
+    val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
+    val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
     val propagateB = Input(Vec(numPropagateB, Bool()))
-    val outputC = Output(Vec(numOutput, SInt(32.W)))
+    val outputC = Output(Vec(numOutput, systolicTensorArray.outputTypeC))
   })
 
   //Wiring Input

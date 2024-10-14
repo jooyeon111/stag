@@ -12,9 +12,14 @@ class VectorProcessingElement[T <: Data](
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T] ) extends Module {
 
-  val outputTypeC = portConfig.createOutputTypeC(
-    portConfig.adderTreeOutputTypeType.getWidth + vectorPeRowIndex + (groupPeRowIndex * vectorPeRow)
-  )
+//  val outputTypeC = portConfig.calculateOutputTypeC(
+//    portConfig.adderTreeOutputTypeType.getWidth + vectorPeRowIndex + (groupPeRowIndex * vectorPeRow)
+//  )
+
+  val outputTypeC = if(portConfig.enableUserBitWidth)
+    portConfig.getStaOutputTypeC
+  else
+    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeRowIndex + (groupPeRowIndex * vectorPeRow))
 
   val io =  IO(new Bundle {
 

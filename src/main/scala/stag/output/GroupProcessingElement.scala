@@ -9,14 +9,15 @@ class GroupProcessingElement[T <: Data](
   numPeMultiplier: Int,
   flagInputC: Boolean,
   portConfig: PortConfig[T],
-  outputTypeC : T,
 )( implicit ev: Arithmetic[T]) extends Module {
 
   val numInputA: Int = numPeMultiplier * vectorPeRow
   val numInputB: Int = numPeMultiplier * vectorPeCol
   val numProcessingElement: Int = vectorPeRow * vectorPeCol
 
-  val vectorProcessingElementVector = Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portConfig, outputTypeC)))
+  val vectorProcessingElementVector = Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portConfig)))
+
+  val outputTypeC = portConfig.getStaOutputTypeC
 
   val registerOutputA = RegInit(VecInit(Seq.fill(numInputA)(ev.zero(portConfig.inputTypeA.getWidth))))
   val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(ev.zero(portConfig.inputTypeB.getWidth))))

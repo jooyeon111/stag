@@ -15,9 +15,14 @@ class GroupProcessingElement[T <: Data](
   val numInputA: Int = peMultiplierCount * vectorPeRow
   val numInputB: Int = peMultiplierCount * vectorPeCol
   val numOutput: Int = vectorPeRow
-  val outputTypeC = portConfig.createOutputTypeC(
-    portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeColIndex * vectorPeCol)
-  )
+//  val outputTypeC = portConfig.calculateOutputTypeC(
+//    portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeColIndex * vectorPeCol)
+//  )
+
+  val outputTypeC = if (portConfig.enableUserBitWidth)
+    portConfig.getStaOutputTypeC
+  else
+    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeColIndex * vectorPeCol))
 
   val vectorProcessingElementVector = if(flagInputC) {
     Vector.tabulate(vectorPeRow, vectorPeCol)( (_, vectorPeColIndex) => {

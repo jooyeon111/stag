@@ -23,7 +23,7 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
 
   val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
   val preProcessorInputB = Module (new PreProcessor(groupPeCol, vectorPeCol, numPeMultiplier, skewFlag = true, portConfig.inputTypeB))
-  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, outputTypeC, generateRtl = false))
+  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
   val postProcessor = Module (new DeskewBuffer(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, outputTypeC))
 
   val io = IO(new Bundle {

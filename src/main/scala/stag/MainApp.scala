@@ -29,6 +29,7 @@ object MainApp extends App {
     bitWidthPortB: Int,
     bitWidthMultiplierOutput: Int,
     bitWidthAdderTreeOutput: Int,
+    enableUserBitWidth: Boolean,
     bitWidthPortC: Int
   )
 
@@ -83,19 +84,47 @@ object MainApp extends App {
     val bitWidthPortB = config.getInt("Port B").get
     val bitWidthMultiplierOutput = bitWidthPortA + bitWidthPortB
     val bitWidthAdderTreeOutput = bitWidthMultiplierOutput + log2Ceil(arrayConfig.numPeMultiplier)
-    val bitWidthPortC = dataflow match {
-      case Dataflow.Is => bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeCol * arrayConfig.vectorPeCol
-      case Dataflow.Os => config.getInt("Port C").get
-      case Dataflow.Ws => bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeRow * arrayConfig.vectorPeRow
-      case _ => throw new IllegalArgumentException("Invalid dataflow")
+    val bitWidthPortC = config.getInt("Port C").getOrElse(-1)
+
+    val enableUserBitWidth = if(bitWidthPortC.isValidInt){
+      if (bitWidthPortC == -1)
+        false
+      else
+        true
+    } else
+      false
+
+    val staBitWidthPortC = if(enableUserBitWidth) {
+      config.getInt("Port C").get
+    } else {
+      dataflow match {
+        case Dataflow.Is =>
+          bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeCol * arrayConfig.vectorPeCol
+
+        case Dataflow.Os =>
+          if(bitWidthPortA > bitWidthPortB)
+            bitWidthPortA
+          else
+            bitWidthPortB
+
+        case Dataflow.Ws =>
+          bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeRow * arrayConfig.vectorPeRow
+
+      }
     }
+
+    assert(staBitWidthPortC >= bitWidthPortA,
+      s"Output port bit width is too small output port C: $staBitWidthPortC input port A: $bitWidthPortA")
+    assert(staBitWidthPortC >= bitWidthPortB,
+      s"Output port bit width is too small output port C: $staBitWidthPortC input port B: $bitWidthPortB")
 
     val portBitWidthInfo = PortBitWidthInfo(
       bitWidthPortA,
       bitWidthPortB,
       bitWidthMultiplierOutput,
       bitWidthAdderTreeOutput,
-      bitWidthPortC
+      enableUserBitWidth,
+      staBitWidthPortC
     )
 
 
@@ -131,11 +160,13 @@ object MainApp extends App {
     val adderTreeOutputType = typeConstructor(portBitWidthInfo.bitWidthAdderTreeOutput)
     val outputTypeC = typeConstructor(portBitWidthInfo.bitWidthPortC)
 
-    val portConfig = PortConfig(
+    val portConfig = new PortConfig(
       inputTypeA,
       inputTypeB,
       multiplierOutputType,
       adderTreeOutputType,
+      portBitWidthInfo.enableUserBitWidth,
+      outputTypeC
     )
 
     lazy val rtlGenerator =  (hierarchy, dataflow) match {

@@ -6,10 +6,10 @@ import stag.common.{ Mac, PortConfig, Arithmetic}
 class VectorProcessingElement[T <: Data](
   peMultiplierCount: Int,
   portConfig: PortConfig[T],
-  outputTypeC: T,
 )( implicit ev: Arithmetic[T] ) extends Module {
 
   val mac= Module(new Mac(peMultiplierCount, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val outputTypeC = portConfig.getStaOutputTypeC
   val outputRegister = RegInit(ev.zero(outputTypeC.getWidth))
 
   val io = IO(new Bundle {

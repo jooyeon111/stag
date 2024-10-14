@@ -10,7 +10,6 @@ class SystolicTensorArray[T <: Data](
   vectorPeCol : Int,
   numPeMultiplier : Int,
   portConfig: PortConfig[T],
-  outputTypeC: T,
   generateRtl: Boolean
 )( implicit ev: Arithmetic[T] ) extends Module{
 
@@ -21,7 +20,6 @@ class SystolicTensorArray[T <: Data](
       arrayConfig.vectorPeCol,
       arrayConfig.numPeMultiplier,
       portConfig,
-      outputPortType,
       generateRtl
     )
 
@@ -30,11 +28,13 @@ class SystolicTensorArray[T <: Data](
   val numProcessingElemnt = vectorPeRow * vectorPeCol
   val numOutput: Int = (groupPeCol + groupPeRow - 1) * numProcessingElemnt
 
+  val outputTypeC = portConfig.getStaOutputTypeC
+
   val groupProcessingElementVector =
     Vector.tabulate(groupPeRow, groupPeCol)( (x,y) => if( x == 0 || y == groupPeCol - 1){
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false,  portConfig, outputTypeC))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false,  portConfig))
     } else {
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig, outputTypeC))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
     })
 
   val io = IO(new Bundle {

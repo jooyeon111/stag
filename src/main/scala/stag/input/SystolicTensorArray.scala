@@ -20,10 +20,12 @@ class SystolicTensorArray[T <: Data](
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateA: Int = groupPeCol * vectorPeCol
   val numOutput : Int = groupPeRow * vectorPeRow
-  val outputTypeC = portConfig.createOutputTypeC(
-    portConfig.adderTreeOutputTypeType.getWidth
-      + (groupPeCol * vectorPeCol)
-  )
+//  val outputTypeC = portConfig.calculateOutputTypeC(
+//    portConfig.adderTreeOutputTypeType.getWidth
+//      + (groupPeCol * vectorPeCol)
+//  )
+
+  val outputTypeC = portConfig.getStaOutputTypeC
 
   val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((_, groupPeColIndex) => if ( groupPeColIndex == 0 ) {
     Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
