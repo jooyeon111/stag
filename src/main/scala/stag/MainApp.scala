@@ -94,6 +94,11 @@ object MainApp extends App {
     } else
       false
 
+    if(enableUserBitWidth)
+      println("Use user define bit width")
+    else
+      println("Use default bit width")
+
     val staBitWidthPortC = if(enableUserBitWidth) {
       config.getInt("Port C").get
     } else {
@@ -188,7 +193,7 @@ object MainApp extends App {
     val dataflowString = dataflow.toString.toLowerCase
     ChiselStage.emitSystemVerilogFile(
       rtlGenerator,
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/${prefix}${dataflowString}_sta_$arrayConfigString.sv")
+      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info","-split-verilog" ,s"-o=output/${prefix}${dataflowString}_sta_$arrayConfigString.sv")
     )
 
   }

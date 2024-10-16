@@ -20,10 +20,6 @@ class SystolicTensorArray[T <: Data](
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateA: Int = groupPeCol * vectorPeCol
   val numOutput : Int = groupPeRow * vectorPeRow
-//  val outputTypeC = portConfig.calculateOutputTypeC(
-//    portConfig.adderTreeOutputTypeType.getWidth
-//      + (groupPeCol * vectorPeCol)
-//  )
 
   val outputTypeC = portConfig.getStaOutputTypeC
 

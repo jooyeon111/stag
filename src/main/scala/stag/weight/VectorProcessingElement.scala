@@ -7,7 +7,7 @@ class VectorProcessingElement[T <: Data](
   groupPeRowIndex: Int,
   vectorPeRowIndex: Int,
   vectorPeRow: Int,
-  peMultiplierCount: Int,
+  numPeMultiplier: Int,
   flagInputC: Boolean,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T] ) extends Module {
@@ -24,22 +24,22 @@ class VectorProcessingElement[T <: Data](
   val io =  IO(new Bundle {
 
     //Input
-    val inputA = Input(Vec(peMultiplierCount, portConfig.inputTypeA))
-    val inputB = Input(Vec(peMultiplierCount, portConfig.inputTypeB))
+    val inputA = Input(Vec(numPeMultiplier, portConfig.inputTypeA))
+    val inputB = Input(Vec(numPeMultiplier, portConfig.inputTypeB))
     val inputC = if(flagInputC) Some(Input(outputTypeC)) else None
 
     //Control
     val propagateB: Bool = Input(Bool())
 
     //Output
-    val outputB = Output(Vec(peMultiplierCount, portConfig.inputTypeB))
+    val outputB = Output(Vec(numPeMultiplier, portConfig.inputTypeB))
     val outputC = Output(outputTypeC)
 
   })
 
-  val mac = Module(new Mac(peMultiplierCount, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val mac = Module(new Mac(numPeMultiplier, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
 
-  io.outputB := RegNext(Mux(io.propagateB, io.inputB, io.outputB), VecInit.fill(peMultiplierCount)(ev.zero(portConfig.inputTypeB.getWidth)))
+  io.outputB := RegNext(Mux(io.propagateB, io.inputB, io.outputB), VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeB.getWidth)))
 
   mac.io.inputA := io.inputA
   mac.io.inputB := io.inputB

@@ -17,6 +17,7 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], outputPortType: T)(implicit ev: Arithmetic[T]) =
     this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, outputPortType)
 
+  //TODO fix below code
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numOutput: Int = (groupPeCol + groupPeRow - 1)* vectorPeRow * vectorPeCol
@@ -42,12 +43,12 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   postProcessor.io.input := systolicTensorArray.io.outputC
 
   //Wiring propagate signal
-  systolicTensorArray.io.propagateOutput := RegNext( io.propagateOutput, VecInit.fill(groupPeRow - 1, groupPeCol -1)(false.B) )
+  systolicTensorArray.io.propagateOutput := RegNext( io.propagateOutput, VecInit.fill(groupPeRow-1)(VecInit.fill(groupPeCol-1)(false.B)))
 
   //Wiring partial sum signals
-  systolicTensorArray.io.partialSumReset := RegNext( io.partialSumReset, VecInit.fill(groupPeRow, groupPeCol)(false.B)  )
+  systolicTensorArray.io.partialSumReset := RegNext( io.partialSumReset, VecInit.fill(groupPeRow)(VecInit.fill(groupPeCol)(false.B)) )
 
   //Wiring Output
-  io.outputC := systolicTensorArray.io.outputC
+  io.outputC := postProcessor.io.output
 
 }

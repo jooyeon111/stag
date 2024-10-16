@@ -7,17 +7,14 @@ class GroupProcessingElement[T <: Data](
   groupPeRowIndex: Int,
   vectorPeRow: Int,
   vectorPeCol: Int,
-  peMultiplierCount: Int,
+  numPeMultiplier: Int,
   flagInputC: Boolean,
   portConfig: PortConfig[T]
 )( implicit ev: Arithmetic[T] ) extends Module {
 
-  val numInputA: Int = peMultiplierCount * vectorPeRow
-  val numInputB: Int = peMultiplierCount * vectorPeCol
+  val numInputA: Int = numPeMultiplier * vectorPeRow
+  val numInputB: Int = numPeMultiplier * vectorPeCol
   val numOutput: Int = vectorPeCol
-//  val outputTypeC = portConfig.calculateOutputTypeC(
-//    portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeRowIndex * vectorPeCol)
-//  )
 
   val outputTypeC = if(portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
@@ -26,13 +23,13 @@ class GroupProcessingElement[T <: Data](
 
   val vectorProcessingElementVector = if(flagInputC) {
     Vector.tabulate(vectorPeRow, vectorPeCol)( (vectorPeRowIndex,_) => {
-      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, peMultiplierCount, flagInputC = true, portConfig))
+      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, numPeMultiplier, flagInputC = true, portConfig))
     })
   } else {
     Vector.tabulate(vectorPeRow, vectorPeCol)( (vectorPeRowIndex,_) => if ( vectorPeRowIndex == 0 ){
-      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, peMultiplierCount, flagInputC = false, portConfig))
+      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, numPeMultiplier, flagInputC = false, portConfig))
     } else {
-      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, peMultiplierCount, flagInputC = true, portConfig))
+      Module(new VectorProcessingElement(groupPeRowIndex, vectorPeRowIndex, vectorPeRow, numPeMultiplier, flagInputC = true, portConfig))
     })
   }
 
@@ -50,26 +47,26 @@ class GroupProcessingElement[T <: Data](
   //Input A
   for (a <- 0 until vectorPeRow)
     for (b <- 0 until vectorPeCol)
-      for (p <- 0 until peMultiplierCount)
-        vectorProcessingElementVector(a)(b).io.inputA(p) := io.inputA(a * peMultiplierCount + p)
+      for (p <- 0 until numPeMultiplier)
+        vectorProcessingElementVector(a)(b).io.inputA(p) := io.inputA(a * numPeMultiplier + p)
 
   io.outputA := RegNext(io.inputA, VecInit.fill(numInputA)(ev.zero(portConfig.inputTypeA.getWidth)))
 
   //Input B
   for( b <- 0 until vectorPeCol )
-    for( p <- 0 until peMultiplierCount )
-      vectorProcessingElementVector(0)(b).io.inputB(p) := io.inputB(b * peMultiplierCount + p)
+    for( p <- 0 until numPeMultiplier )
+      vectorProcessingElementVector(0)(b).io.inputB(p) := io.inputB(b * numPeMultiplier + p)
 
 
   for( a <- 1 until vectorPeRow )
     for( b <- 0 until vectorPeCol )
-      for( p <- 0 until peMultiplierCount )
+      for( p <- 0 until numPeMultiplier )
         vectorProcessingElementVector(a)(b).io.inputB(p) := vectorProcessingElementVector(a - 1)(b).io.outputB(p)
 
 
   for( b <- 0 until vectorPeCol )
-    for( p <- 0 until peMultiplierCount )
-      io.outputB(b * peMultiplierCount + p) := vectorProcessingElementVector(vectorPeRow - 1)(b).io.outputB(p)
+    for( p <- 0 until numPeMultiplier )
+      io.outputB(b * numPeMultiplier + p) := vectorProcessingElementVector(vectorPeRow - 1)(b).io.outputB(p)
 
   //Wiring Control
   for( a <- 0 until vectorPeRow )
