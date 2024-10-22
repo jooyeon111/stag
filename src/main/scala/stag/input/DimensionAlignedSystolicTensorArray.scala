@@ -9,11 +9,14 @@ class DimensionAlignedSystolicTensorArray[ T <: Data ] (
   vectorPeRow : Int,
   vectorPeCol : Int,
   numPeMultiplier : Int,
+  dedicatedName: String,
   portConfig: PortConfig[T],
 )(implicit ev: Arithmetic[T]) extends Module {
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig)
+  def this(arrayConfig: SystolicTensorArrayConfig, dedicatedName: String, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
+    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, dedicatedName, portConfig)
+
+  override def desiredName: String = dedicatedName
 
   //TODO fix below code
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier

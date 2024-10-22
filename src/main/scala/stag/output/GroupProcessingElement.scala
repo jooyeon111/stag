@@ -7,7 +7,7 @@ class GroupProcessingElement[T <: Data](
   vectorPeRow: Int,
   vectorPeCol: Int,
   numPeMultiplier: Int,
-  flagInputC: Boolean,
+  withInputC: Boolean,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T]) extends Module {
 
@@ -28,10 +28,10 @@ class GroupProcessingElement[T <: Data](
     //Input
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA ))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB ))
-    val inputC = if(flagInputC) Some(Input(Input(Vec(numProcessingElement, outputTypeC)))) else None
+    val inputC = if(withInputC) Some(Input(Input(Vec(numProcessingElement, outputTypeC)))) else None
 
     //Control
-    val propagateOutput: Option[Bool] = if(flagInputC) Some(Input(Bool())) else None
+    val propagateOutput: Option[Bool] = if(withInputC) Some(Input(Bool())) else None
     val partialSumReset: Bool = Input(Bool())
 
     //Output
@@ -66,7 +66,7 @@ class GroupProcessingElement[T <: Data](
   for( a <- 0 until vectorPeRow)
     for( b <- 0 until vectorPeCol){
       val index = a * vectorPeCol + b
-      if(flagInputC)
+      if(withInputC)
         registerOutputC(index) := Mux(io.propagateOutput.get, io.inputC.get(index), vectorProcessingElementVector(a)(b).io.output)
       else
         registerOutputC(index) := vectorProcessingElementVector(a)(b).io.output

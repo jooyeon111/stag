@@ -13,7 +13,7 @@ class SystolicTensorArray[T <: Data](
   generateRtl: Boolean
 )( implicit ev: Arithmetic[T] ) extends Module{
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], outputPortType : T, generateRtl: Boolean)(implicit ev: Arithmetic[T]) = this(
+  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) = this(
       arrayConfig.groupPeRow,
       arrayConfig.groupPeCol,
       arrayConfig.vectorPeRow,
@@ -32,9 +32,9 @@ class SystolicTensorArray[T <: Data](
 
   val groupProcessingElementVector =
     Vector.tabulate(groupPeRow, groupPeCol)( (x,y) => if( x == 0 || y == groupPeCol - 1){
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false,  portConfig))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = false,  portConfig))
     } else {
-      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+      Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
     })
 
   val io = IO(new Bundle {

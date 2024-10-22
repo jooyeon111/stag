@@ -140,13 +140,12 @@ object MainApp extends App {
 
   def generateRtl(appConfig: AppConfig): Unit = {
     val AppConfig(hierarchy, dataflow, arrayConfig, integerType, portBitWidthInfo) = appConfig
-    val arrayConfigString = s"{${arrayConfig.groupPeRow}x${arrayConfig.groupPeCol}}x{${arrayConfig.vectorPeRow}x${arrayConfig.vectorPeCol}}x${arrayConfig.numPeMultiplier}"
 
     integerType match {
       case IntegerType.Signed =>
-        generateRtlForType[SInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, arrayConfigString, (w:Int) => SInt(w.W))
+        generateRtlForType[SInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, (w:Int) => SInt(w.W))
       case IntegerType.UnSigned =>
-        generateRtlForType[UInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, arrayConfigString, (w:Int) => UInt(w.W))
+        generateRtlForType[UInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, (w:Int) => UInt(w.W))
     }
   }
 
@@ -155,7 +154,6 @@ object MainApp extends App {
      portBitWidthInfo: PortBitWidthInfo,
      hierarchy: StaHierarchy.Value,
      dataflow: Dataflow.Value,
-     arrayConfigString: String,
      typeConstructor: Int => T
    )(implicit ev: Arithmetic[T]): Unit = {
 
@@ -174,26 +172,28 @@ object MainApp extends App {
       outputTypeC
     )
 
+    val prefix = if (hierarchy == StaHierarchy.DimensionAlignedSta) "dimension_aligned_" else ""
+    val dataflowString = dataflow.toString.toLowerCase
+    val generatedFileName = s"${prefix}${dataflowString}_sta_${arrayConfig.arrayConfigString}"
+
     lazy val rtlGenerator =  (hierarchy, dataflow) match {
       case (StaHierarchy.Sta, Dataflow.Is) =>
         new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
       case (StaHierarchy.Sta, Dataflow.Os) =>
-        new stag.output.SystolicTensorArray(arrayConfig, portConfig, outputTypeC, generateRtl = true)
+        new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
       case (StaHierarchy.Sta, Dataflow.Ws) =>
         new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Is) =>
-        new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig)
+        new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Os) =>
-        new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig, outputTypeC)
+        new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Ws) =>
-        new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, portConfig)
+        new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
     }
-
-    val prefix = if (hierarchy == StaHierarchy.DimensionAlignedSta) "dimension_aligned_" else ""
-    val dataflowString = dataflow.toString.toLowerCase
+    
     ChiselStage.emitSystemVerilogFile(
       rtlGenerator,
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info","-split-verilog" ,s"-o=output/${prefix}${dataflowString}_sta_$arrayConfigString.sv")
+      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName.sv")
     )
 
   }

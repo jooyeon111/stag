@@ -10,7 +10,7 @@ class VectorProcessingElement[T <: Data](
   vectorPeColIndex: Int,
   vectorPeCol: Int,
   numPeMultiplier: Int,
-  flagInputC: Boolean,
+  withInputC: Boolean,
   portConfig: PortConfig[T]
 )( implicit ev: Arithmetic[T] ) extends Module {
 
@@ -24,7 +24,7 @@ class VectorProcessingElement[T <: Data](
     //Input
     val inputA = Input(Vec(numPeMultiplier, portConfig.inputTypeA))
     val inputB = Input(Vec(numPeMultiplier, portConfig.inputTypeB))
-    val inputC = if(flagInputC) Some(Input(outputTypeC)) else None
+    val inputC = if(withInputC) Some(Input(outputTypeC)) else None
 
     //Control
     val propagateA: Bool = Input(Bool())
@@ -36,13 +36,15 @@ class VectorProcessingElement[T <: Data](
   })
 
   val mac = Module(new Mac(numPeMultiplier, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val registerA = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeA.getWidth)))
 
-  io.outputA := RegNext(Mux(io.propagateA, io.inputA, io.outputA), VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeA.getWidth)))
+  registerA := Mux(io.propagateA, io.inputA, io.outputA)
+  io.outputA := registerA
 
-  mac.io.inputA := io.inputA
+  mac.io.inputA := registerA
   mac.io.inputB := io.inputB
 
-  if(flagInputC)
+  if(withInputC)
     io.outputC := RegNext(ev.add(mac.io.output, io.inputC.get), ev.zero(outputTypeC.getWidth))
   else
     io.outputC := RegNext(mac.io.output, ev.zero(outputTypeC.getWidth))

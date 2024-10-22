@@ -25,10 +25,10 @@ class SystolicTensorArray[T <: Data](
   val outputTypeC = portConfig.getStaOutputTypeC
 
   val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol)((groupPeRowIndex, _) => if ( groupPeRowIndex == 0 ) {
-    Module(new GroupProcessingElement(groupPeRowIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
+    Module(new GroupProcessingElement(groupPeRowIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = false, portConfig))
 
   } else{
-    Module(new GroupProcessingElement(groupPeRowIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+    Module(new GroupProcessingElement(groupPeRowIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
   })
 
   val io = IO(new Bundle {
@@ -83,8 +83,10 @@ class SystolicTensorArray[T <: Data](
     //Wiring Control
     for( r <- 0 until groupPeRow )
       for( c <- 0 until groupPeCol )
-        for( a <- 0 until vectorPeRow )
+        for( a <- 0 until vectorPeRow ) {
+//          println(s"groupProcessingElementVector($r)($c).io.propagateB($a) := RegNext(io.propagateB(${a + r * vectorPeRow}), false.B)")
           groupProcessingElementVector(r)(c).io.propagateB(a) := io.propagateB(a + r * vectorPeRow)
+        }
 
   }
 

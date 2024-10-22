@@ -8,7 +8,7 @@ class GroupProcessingElement[T <: Data](
   vectorPeRow: Int,
   vectorPeCol: Int,
   numPeMultiplier: Int,
-  flagInputC: Boolean,
+  withInputC: Boolean,
   portConfig: PortConfig[T]
 )(implicit ev: Arithmetic[T]) extends Module {
 
@@ -21,22 +21,22 @@ class GroupProcessingElement[T <: Data](
   else
     portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeColIndex * vectorPeCol))
 
-  val vectorProcessingElementVector = if(flagInputC) {
+  val vectorProcessingElementVector = if(withInputC) {
     Vector.tabulate(vectorPeRow, vectorPeCol)( (_, vectorPeColIndex) => {
-      Module(new VectorProcessingElement(groupPeColIndex, vectorPeColIndex, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+      Module(new VectorProcessingElement(groupPeColIndex, vectorPeColIndex, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
     })
   } else {
     Vector.tabulate(vectorPeRow, vectorPeCol)( (_,vectorPeColIndex) => if ( vectorPeColIndex == 0 ){
-      Module(new VectorProcessingElement(groupPeColIndex, vectorPeColIndex, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
+      Module(new VectorProcessingElement(groupPeColIndex, vectorPeColIndex, vectorPeCol, numPeMultiplier, withInputC = false, portConfig))
     } else {
-      Module(new VectorProcessingElement(groupPeColIndex, vectorPeColIndex, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+      Module(new VectorProcessingElement(groupPeColIndex, vectorPeColIndex, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
     })
   }
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
-    val inputC = if( flagInputC ) Some( Input(Vec(numOutput, outputTypeC))) else None
+    val inputC = if( withInputC ) Some( Input(Vec(numOutput, outputTypeC))) else None
     val propagateA = Input(Vec(vectorPeCol, Bool()))
     val outputA = Output(Vec(numInputA, portConfig.inputTypeA))
     val outputB = Output(Vec(numInputB, portConfig.inputTypeB))
@@ -72,7 +72,7 @@ class GroupProcessingElement[T <: Data](
       vectorProcessingElementVector(a)(b).io.propagateA := io.propagateA(b)
 
   //Wiring Input C
-  if(flagInputC)
+  if(withInputC)
     for (a <- 0 until vectorPeRow)
       vectorProcessingElementVector(a)(0).io.inputC.get := io.inputC.get(a)
 

@@ -1,8 +1,9 @@
 package stag.output
 
 import chisel3._
-import chisel3.util.MuxCase
+import chisel3.util.{MuxCase, log2Ceil}
 import stag.common.Arithmetic
+
 import scala.math.{ceil, log10}
 
 class Railway[T <: Data](
@@ -14,7 +15,7 @@ class Railway[T <: Data](
 )(implicit ev: Arithmetic[T]) extends Module{
 
   val numInput: Int = (groupPeRow + groupPeCol - 1) * vectorPeRow * vectorPeCol
-  val muxSignalBit = ceil(log10(groupPeCol.toDouble) /  log10(2.0)).toInt
+  val muxSignalBit = log2Ceil(groupPeCol)
   val numOutput: Int = groupPeRow * vectorPeRow * vectorPeCol
 
   val io = IO(new Bundle {
@@ -23,14 +24,14 @@ class Railway[T <: Data](
     val output = Output(Vec(numOutput, portType))
   })
 
-  val semaphore = for (i <- 0 until numOutput) yield {
-    for (j <- 0 until groupPeCol)
-      yield {
-        (io.control(i) === j.U) -> io.input(i + (vectorPeRow * vectorPeCol * j))
-      }
+  val semaphore = for ( i <- 0 until numOutput) yield {
+    (0 until groupPeCol).map { j =>
+      (io.control === j.U) -> io.input(i + (vectorPeRow * vectorPeCol * j))
+    }
   }
 
-  for ( i <- 0 until numOutput)
-    io.output(i) := RegNext(MuxCase(ev.zero(portType.getWidth) , semaphore(i)), ev.zero(portType.getWidth))
+  io.output.zipWithIndex.foreach { case (out, i) =>
+    out := RegNext(MuxCase(ev.zero(portType.getWidth), semaphore(i)), ev.zero(portType.getWidth))
+  }
 
 }

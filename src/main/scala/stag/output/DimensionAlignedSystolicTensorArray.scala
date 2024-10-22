@@ -10,17 +10,19 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   vectorPeRow : Int,
   vectorPeCol : Int,
   numPeMultiplier : Int,
+  dedicatedName: String,
   portConfig: PortConfig[T],
-  outputTypeC: T
 )(implicit ev: Arithmetic[T]) extends Module {
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], outputPortType: T)(implicit ev: Arithmetic[T]) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, outputPortType)
+  def this(arrayConfig: SystolicTensorArrayConfig, dedicatedName: String, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
+    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, dedicatedName, portConfig)
 
-  //TODO fix below code
+  override def desiredName: String = dedicatedName
+
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numOutput: Int = (groupPeCol + groupPeRow - 1)* vectorPeRow * vectorPeCol
+  val outputTypeC = portConfig.getStaOutputTypeC
 
   val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
   val preProcessorInputB = Module (new PreProcessor(groupPeCol, vectorPeCol, numPeMultiplier, skewFlag = true, portConfig.inputTypeB))

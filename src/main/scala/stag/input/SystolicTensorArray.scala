@@ -24,9 +24,9 @@ class SystolicTensorArray[T <: Data](
   val outputTypeC = portConfig.getStaOutputTypeC
 
   val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((_, groupPeColIndex) => if ( groupPeColIndex == 0 ) {
-    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = false, portConfig))
+    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = false, portConfig))
   } else{
-    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, flagInputC = true, portConfig))
+    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
   })
 
   val io = IO(new Bundle {
