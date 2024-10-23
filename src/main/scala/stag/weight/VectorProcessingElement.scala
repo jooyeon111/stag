@@ -8,14 +8,10 @@ class VectorProcessingElement[T <: Data](
   vectorPeRowIndex: Int,
   vectorPeRow: Int,
   numPeMultiplier: Int,
+  withOutputB: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T] ) extends Module {
-
-  if(!withInputC)
-    println(s"Group PE ROW Index: $groupPeRowIndex flag false")
-  else
-    println(s"Group PE ROW Index: $groupPeRowIndex flag true")
 
   val outputTypeC = if(portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
@@ -33,16 +29,22 @@ class VectorProcessingElement[T <: Data](
     val propagateB: Bool = Input(Bool())
 
     //Output
-    val outputB = Output(Vec(numPeMultiplier, portConfig.inputTypeB))
+    val outputB = if(withOutputB) Some (Output(Vec(numPeMultiplier, portConfig.inputTypeB))) else None
     val outputC = Output(outputTypeC)
 
   })
 
   val mac = Module(new Mac(numPeMultiplier, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
   val registerB = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeB.getWidth)))
+  val nextRegisterB = WireDefault(registerB)
 
-  registerB := Mux(io.propagateB, io.inputB, io.outputB)
-  io.outputB := registerB
+  when(io.propagateB) {
+    nextRegisterB := io.inputB
+  }
+  registerB := nextRegisterB
+
+  if(withOutputB)
+    io.outputB.get := registerB
 
   mac.io.inputA := io.inputA
   mac.io.inputB := registerB
@@ -51,6 +53,5 @@ class VectorProcessingElement[T <: Data](
     io.outputC := RegNext(ev.add(mac.io.output, io.inputC.get), ev.zero(outputTypeC.getWidth))
   else
     io.outputC := RegNext(mac.io.output, ev.zero(outputTypeC.getWidth))
-
 
 }

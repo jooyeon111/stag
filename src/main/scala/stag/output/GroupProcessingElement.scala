@@ -7,6 +7,8 @@ class GroupProcessingElement[T <: Data](
   vectorPeRow: Int,
   vectorPeCol: Int,
   numPeMultiplier: Int,
+  withOutputA: Boolean,
+  withOutputB: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T]) extends Module {
@@ -31,12 +33,12 @@ class GroupProcessingElement[T <: Data](
     val inputC = if(withInputC) Some(Input(Input(Vec(numProcessingElement, outputTypeC)))) else None
 
     //Control
-    val propagateOutput: Option[Bool] = if(withInputC) Some(Input(Bool())) else None
-    val partialSumReset: Bool = Input(Bool())
+    val propagateOutput = if(withInputC) Some(Input(Bool())) else None
+    val partialSumReset = Input(Bool())
 
     //Output
-    val outputA = Output(Vec(numInputA, portConfig.inputTypeA))
-    val outputB = Output(Vec(numInputB, portConfig.inputTypeB))
+    val outputA = if(withOutputA) Some(Output(Vec(numInputA, portConfig.inputTypeA))) else None
+    val outputB = if(withOutputB) Some(Output(Vec(numInputB, portConfig.inputTypeB))) else None
     val outputC = Output(Vec(numProcessingElement, outputTypeC))
 
   })
@@ -73,8 +75,12 @@ class GroupProcessingElement[T <: Data](
     }
 
   //Wiring Output
-  io.outputA := registerOutputA
-  io.outputB := registerOutputB
+  if(withOutputA)
+    io.outputA.get := registerOutputA
+
+  if(withOutputB)
+    io.outputB.get := registerOutputB
+
   io.outputC := registerOutputC
 
 }

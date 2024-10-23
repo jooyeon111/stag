@@ -1,15 +1,14 @@
 package stag.input
 
 import chisel3._
-import stag.common.Mac
-import stag.common.Arithmetic
-import stag.common.PortConfig
+import stag.common.{Mac, Arithmetic, PortConfig}
 
 class VectorProcessingElement[T <: Data](
   groupPeColIndex: Int,
   vectorPeColIndex: Int,
   vectorPeCol: Int,
   numPeMultiplier: Int,
+  withOutputA: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T]
 )( implicit ev: Arithmetic[T] ) extends Module {
@@ -30,16 +29,28 @@ class VectorProcessingElement[T <: Data](
     val propagateA: Bool = Input(Bool())
 
     //Output
-    val outputA = Output(Vec(numPeMultiplier, portConfig.inputTypeA))
+    val outputA = if(withOutputA) Some ( Output(Vec(numPeMultiplier, portConfig.inputTypeA)) ) else None
     val outputC = Output(portConfig.inputTypeB)
 
   })
 
-  val mac = Module(new Mac(numPeMultiplier, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val mac = Module(new Mac(
+    numPeMultiplier,
+    portConfig.inputTypeA,
+    portConfig.inputTypeB,
+    portConfig.multiplierOutputType,
+    portConfig.adderTreeOutputTypeType
+  ))
   val registerA = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeA.getWidth)))
+  val nextRegisterA = WireDefault(registerA)
 
-  registerA := Mux(io.propagateA, io.inputA, io.outputA)
-  io.outputA := registerA
+  when(io.propagateA) {
+    nextRegisterA := io.inputA
+  }
+  registerA := nextRegisterA
+
+  if(withOutputA)
+    io.outputA.get := registerA
 
   mac.io.inputA := registerA
   mac.io.inputB := io.inputB

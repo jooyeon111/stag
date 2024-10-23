@@ -31,9 +31,6 @@ all:
 	sbt "runMain stag.MainApp ws_1x1x1x16x4.cfg"
 	sbt "runMain stag.MainApp ws_1x1x1x4x16.cfg"
 
-test2:
-	sbt "runMain stag.MainApp ws_8x8x1x1x1.cfg"
-
 clean:
 
 	rm -rf $(CURDIR)/*.sv

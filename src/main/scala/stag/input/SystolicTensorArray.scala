@@ -14,20 +14,95 @@ class SystolicTensorArray[T <: Data](
 )( implicit ev: Arithmetic[T] ) extends Module {
 
   def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, generateRtl)
+    this(
+      arrayConfig.groupPeRow,
+      arrayConfig.groupPeCol,
+      arrayConfig.vectorPeRow,
+      arrayConfig.vectorPeCol,
+      arrayConfig.numPeMultiplier,
+      portConfig,
+      generateRtl
+    )
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateA: Int = groupPeCol * vectorPeCol
   val numOutput : Int = groupPeRow * vectorPeRow
-
   val outputTypeC = portConfig.getStaOutputTypeC
 
-  val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((_, groupPeColIndex) => if ( groupPeColIndex == 0 ) {
-    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = false, portConfig))
-  } else{
-    Module(new GroupProcessingElement(groupPeColIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
-  })
+  val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((groupPeRowIndex, groupPeColIndex) =>
+    if(groupPeRowIndex < groupPeRow - 1){
+      if(groupPeColIndex == 0){
+        Module(new GroupProcessingElement(
+          groupPeColIndex,
+          vectorPeRow,
+          vectorPeCol,
+          numPeMultiplier,
+          withOutputA = true,
+          withOutputB = true,
+          withInputC = false,
+          portConfig
+        ))
+      } else if(groupPeColIndex < groupPeCol - 1){
+        Module(new GroupProcessingElement(
+          groupPeColIndex,
+          vectorPeRow,
+          vectorPeCol,
+          numPeMultiplier,
+          withOutputA = true,
+          withOutputB = true,
+          withInputC = true,
+          portConfig
+        ))
+      } else {
+        Module(new GroupProcessingElement(
+          groupPeColIndex,
+          vectorPeRow,
+          vectorPeCol,
+          numPeMultiplier,
+          withOutputA = false,
+          withOutputB = true,
+          withInputC = true,
+          portConfig
+        ))
+      }
+    } else {
+      if(groupPeColIndex == 0){
+        Module(new GroupProcessingElement(
+          groupPeColIndex,
+          vectorPeRow,
+          vectorPeCol,
+          numPeMultiplier,
+          withOutputA = true,
+          withOutputB = false,
+          withInputC = false,
+          portConfig
+        ))
+      } else if(groupPeColIndex < groupPeCol - 1){
+        Module(new GroupProcessingElement(
+          groupPeColIndex,
+          vectorPeRow,
+          vectorPeCol,
+          numPeMultiplier,
+          withOutputA = true,
+          withOutputB = false,
+          withInputC = true,
+          portConfig
+        ))
+      } else {
+        Module(new GroupProcessingElement(
+          groupPeColIndex,
+          vectorPeRow,
+          vectorPeCol,
+          numPeMultiplier,
+          withOutputA = false,
+          withOutputB = false,
+          withInputC = true,
+          portConfig
+        ))
+      }
+    }
+  )
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
@@ -92,7 +167,7 @@ class SystolicTensorArray[T <: Data](
       for( a <- 0 until vectorPeRow)
         for( p <- 0 until numPeMultiplier) {
           val multiplierIndex = a * numPeMultiplier + p
-          groupProcessingElementVector(r)(c).io.inputA(multiplierIndex) := groupProcessingElementVector(r)(c - 1).io.outputA(multiplierIndex)
+          groupProcessingElementVector(r)(c).io.inputA(multiplierIndex) := groupProcessingElementVector(r)(c - 1).io.outputA.get(multiplierIndex)
         }
 
   //Wiring Output B
@@ -101,7 +176,7 @@ class SystolicTensorArray[T <: Data](
       for( b <- 0 until vectorPeCol )
         for( p <- 0 until numPeMultiplier ) {
           val multiplierIndex = b * numPeMultiplier + p
-          groupProcessingElementVector(r)(c).io.inputB(multiplierIndex) := groupProcessingElementVector(r-1)(c).io.outputB(multiplierIndex)
+          groupProcessingElementVector(r)(c).io.inputB(multiplierIndex) := groupProcessingElementVector(r-1)(c).io.outputB.get(multiplierIndex)
         }
 
   //Wiring Output
