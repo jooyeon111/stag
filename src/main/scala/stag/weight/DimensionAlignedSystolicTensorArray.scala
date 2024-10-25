@@ -14,7 +14,15 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
 )(implicit ev: Arithmetic[T]) extends Module {
 
   def this(arrayConfig: SystolicTensorArrayConfig, dedicatedName: String, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, dedicatedName, portConfig)
+    this(
+      arrayConfig.groupPeRow,
+      arrayConfig.groupPeCol,
+      arrayConfig.vectorPeRow,
+      arrayConfig.vectorPeCol,
+      arrayConfig.numPeMultiplier,
+      dedicatedName,
+      portConfig
+    )
 
   override def desiredName: String = dedicatedName
 
@@ -23,17 +31,36 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateB: Int = groupPeRow * vectorPeRow
   val numOutput : Int = groupPeCol * vectorPeCol
-//  val outputTypeC = portConfig.calculateOutputTypeC(
-//    portConfig.adderTreeOutputTypeType.getWidth
-//      + (groupPeRow * vectorPeRow)
-//  )
 
-  val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
-  val preProcessorInputB = Module (new PreProcessor(groupPeCol, vectorPeCol, numPeMultiplier, skewFlag = false, portConfig.inputTypeB))
-  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
-  val postProcessor = Module (new PostProcessor(groupPeCol, vectorPeCol, systolicTensorArray.outputTypeC))
+  val preProcessorInputA = Module (new PreProcessor(
+    groupPeRow,
+    vectorPeRow,
+    numPeMultiplier,
+    skewFlag = true,
+    portConfig.inputTypeA
+  ))
+  val preProcessorInputB = Module (new PreProcessor(
+    groupPeCol,
+    vectorPeCol,
+    numPeMultiplier,
+    skewFlag = false,
+    portConfig.inputTypeB
+  ))
+  val systolicTensorArray = Module (new SystolicTensorArray(
+    groupPeRow,
+    groupPeCol,
+    vectorPeRow,
+    vectorPeCol,
+    numPeMultiplier,
+    portConfig,
+    generateRtl = false
+  ))
+  val postProcessor = Module (new PostProcessor(
+    groupPeCol,
+    vectorPeCol,
+    systolicTensorArray.outputTypeC
+  ))
 
-  // register in front of control signals
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))

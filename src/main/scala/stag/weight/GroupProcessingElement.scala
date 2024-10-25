@@ -21,7 +21,7 @@ class GroupProcessingElement[T <: Data](
   val outputTypeC = if(portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
   else
-    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeCol + (groupPeRowIndex * vectorPeCol))
+    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeRow + (groupPeRowIndex * vectorPeRow))
 
   val vectorProcessingElementVector = (withOutputB, withInputC) match {
     case(false, false) =>
@@ -166,7 +166,9 @@ class GroupProcessingElement[T <: Data](
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
     val inputC = if( withInputC ) Some( Input(Vec(numOutput, outputTypeC))) else None
+
     val propagateB = Input(Vec(vectorPeRow, Bool()))
+
     val outputA = if(withOutputA) Some (Output(Vec(numInputA, portConfig.inputTypeA))) else None
     val outputB = if(withOutputB) Some (Output(Vec(numInputB, portConfig.inputTypeB))) else None
     val outputC = Output(Vec(numOutput, outputTypeC))
@@ -216,6 +218,6 @@ class GroupProcessingElement[T <: Data](
 
 
   for( b <- 0 until vectorPeCol )
-    io.outputC(b) := RegNext(vectorProcessingElementVector(vectorPeRow - 1)(b).io.outputC, ev.zero(portConfig.inputTypeB.getWidth) )
+    io.outputC(b) := RegNext(vectorProcessingElementVector(vectorPeRow - 1)(b).io.outputC, ev.zero(outputTypeC.getWidth) )
 
 }

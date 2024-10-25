@@ -34,7 +34,13 @@ class VectorProcessingElement[T <: Data](
 
   })
 
-  val mac = Module(new Mac(numPeMultiplier, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  val mac = Module(new Mac(
+    numPeMultiplier,
+    portConfig.inputTypeA,
+    portConfig.inputTypeB,
+    portConfig.multiplierOutputType,
+    portConfig.adderTreeOutputTypeType
+  ))
   val registerB = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeB.getWidth)))
   val nextRegisterB = WireDefault(registerB)
 

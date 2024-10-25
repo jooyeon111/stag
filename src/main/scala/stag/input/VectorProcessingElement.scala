@@ -30,7 +30,7 @@ class VectorProcessingElement[T <: Data](
 
     //Output
     val outputA = if(withOutputA) Some ( Output(Vec(numPeMultiplier, portConfig.inputTypeA)) ) else None
-    val outputC = Output(portConfig.inputTypeB)
+    val outputC = Output(outputTypeC)
 
   })
 

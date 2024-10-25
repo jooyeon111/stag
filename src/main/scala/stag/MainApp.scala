@@ -193,7 +193,8 @@ object MainApp extends App {
     
     ChiselStage.emitSystemVerilogFile(
       rtlGenerator,
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName.sv")
+      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName/", "-split-verilog")
+//      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
 
   }

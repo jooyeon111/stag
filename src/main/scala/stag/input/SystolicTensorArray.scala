@@ -190,7 +190,4 @@ class SystolicTensorArray[T <: Data](
       io.outputC(a + (r * vectorPeRow)) := groupProcessingElementVector(r)(groupPeCol - 1).io.outputC(a)
 
 
-
-
-
 }

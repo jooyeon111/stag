@@ -15,21 +15,21 @@ class SystolicTensorArray[T <: Data](
 )(implicit ev: Arithmetic[T]) extends Module{
 
   def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) =
-    this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, portConfig, generateRtl)
+    this(
+      arrayConfig.groupPeRow,
+      arrayConfig.groupPeCol,
+      arrayConfig.vectorPeRow,
+      arrayConfig.vectorPeCol,
+      arrayConfig.numPeMultiplier,
+      portConfig,
+      generateRtl
+    )
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateB: Int = groupPeRow * vectorPeRow
   val numOutput : Int = groupPeCol * vectorPeCol
-
   val outputTypeC = portConfig.getStaOutputTypeC
-
-//  val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol)((groupPeRowIndex, _) => if ( groupPeRowIndex == 0 ) {
-//    Module(new GroupProcessingElement(groupPeRowIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = false, portConfig))
-//
-//  } else{
-//    Module(new GroupProcessingElement(groupPeRowIndex, vectorPeRow, vectorPeCol, numPeMultiplier, withInputC = true, portConfig))
-//  })
 
   val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol)( (groupPeRowIndex, groupPeColIndex) =>
     if(groupPeColIndex < groupPeCol - 1){

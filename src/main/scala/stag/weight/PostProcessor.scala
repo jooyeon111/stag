@@ -2,7 +2,7 @@ package stag.weight
 
 import chisel3._
 import chisel3.util.ShiftRegister
-import stag.common.{Arithmetic, PortConfig}
+import stag.common.Arithmetic
 
 class PostProcessor[T <: Data](
   groupPeCol: Int,
