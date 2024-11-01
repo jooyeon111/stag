@@ -9,7 +9,7 @@ class GroupProcessingElement[T <: Data](
   numPeMultiplier: Int,
   withOutputA: Boolean,
   withOutputB: Boolean,
-  withInputC: Boolean,
+  val withInputC: Boolean,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T]) extends Module {
 

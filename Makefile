@@ -1,36 +1,23 @@
 test:
-	#sbt "runMain stag.MainApp is_8x8x1x1x1.cfg"
+	sbt "runMain stag.MainApp is_8x8x1x1x1.cfg"
 	sbt "runMain stag.MainApp os_8x8x1x1x1.cfg"
 	#sbt "runMain stag.MainApp ws_8x8x1x1x1.cfg"
 
 all:
+	sbt "runMain stag.MainApp is_8x8x4x1x2.cfg"
+	sbt "runMain stag.MainApp is_16x8x4x1x1.cfg"
+	sbt "runMain stag.MainApp is_16x16x2x1x1.cfg"
+	sbt "runMain stag.MainApp is_32x16x1x1x1.cfg"
 
-	sbt "runMain stag.MainApp is_8x8x1x1x1.cfg"
-	sbt "runMain stag.MainApp is_4x4x4x1x1.cfg"
-	sbt "runMain stag.MainApp is_4x4x1x1x4.cfg"
-	sbt "runMain stag.MainApp is_2x2x16x1x1.cfg"
-	sbt "runMain stag.MainApp is_2x2x4x1x4.cfg"
-	sbt "runMain stag.MainApp is_2x2x1x1x16.cfg"
-	sbt "runMain stag.MainApp is_1x1x16x1x4.cfg"
-	sbt "runMain stag.MainApp is_1x1x4x1x16.cfg"
+	sbt "runMain stag.MainApp os_4x8x1x1x4.cfg"
+	sbt "runMain stag.MainApp os_8x16x1x1x4.cfg"
+	sbt "runMain stag.MainApp os_16x16x1x1x2.cfg"
+	sbt "runMain stag.MainApp os_16x32x1x1x1.cfg"
 
-	sbt "runMain stag.MainApp os_8x8x1x1x1.cfg"
-	sbt "runMain stag.MainApp os_4x4x2x2x1.cfg"
-	sbt "runMain stag.MainApp os_4x4x1x1x4.cfg"
-	sbt "runMain stag.MainApp os_2x2x4x4x1.cfg"
-	sbt "runMain stag.MainApp os_2x2x2x2x4.cfg"
-	sbt "runMain stag.MainApp os_2x2x1x1x16.cfg"
-	sbt "runMain stag.MainApp os_1x1x4x4x4.cfg"
-	sbt "runMain stag.MainApp os_1x1x2x2x16.cfg"
-
-	sbt "runMain stag.MainApp ws_8x8x1x1x1.cfg"
-	sbt "runMain stag.MainApp ws_4x4x1x4x1.cfg"
-	sbt "runMain stag.MainApp ws_4x4x1x1x4.cfg"
-	sbt "runMain stag.MainApp ws_2x2x1x16x1.cfg"
-	sbt "runMain stag.MainApp ws_2x2x1x4x4.cfg"
-	sbt "runMain stag.MainApp ws_2x2x1x1x16.cfg"
-	sbt "runMain stag.MainApp ws_1x1x1x16x4.cfg"
-	sbt "runMain stag.MainApp ws_1x1x1x4x16.cfg"
+	sbt "runMain stag.MainApp ws_8x8x1x4x2.cfg"
+	sbt "runMain stag.MainApp ws_8x16x1x4x1.cfg"
+	sbt "runMain stag.MainApp ws_16x16x1x2x1.cfg"
+	sbt "runMain stag.MainApp ws_16x32x1x1x1.cfg"
 
 clean:
 

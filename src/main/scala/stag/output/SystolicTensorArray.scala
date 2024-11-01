@@ -25,9 +25,11 @@ class SystolicTensorArray[T <: Data](
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
-  val numProcessingElemnt = vectorPeRow * vectorPeCol
+  val numProcessingElemnt: Int = vectorPeRow * vectorPeCol
   val numOutput: Int = (groupPeCol + groupPeRow - 1) * numProcessingElemnt
   val outputTypeC = portConfig.getStaOutputTypeC
+  val numPartialSumReset = groupPeRow + groupPeCol - 1
+  val numPropagateOutput: Int = groupPeCol - 1
 
   val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol)( (row,col) => if( row == 0 ){
       if( col == groupPeCol - 1){
@@ -55,8 +57,10 @@ class SystolicTensorArray[T <: Data](
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
-    val propagateOutput =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
-    val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
+
+    val partialSumReset = Input(Vec(numPartialSumReset, Bool()))
+    val propagateOutput =  Input(Vec(numPropagateOutput, Bool()))
+
     val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
@@ -78,44 +82,55 @@ class SystolicTensorArray[T <: Data](
           groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier )), ev.zero(portConfig.inputTypeB.getWidth) )
         }
 
-    //Wiring propagate signal
-    for( r <- 0 until groupPeRow - 1 )
-      for( c<- 0 until groupPeCol - 1 )
-        groupProcessingElementVector(r + 1)(c).io.propagateOutput.get := RegNext( io.propagateOutput(r)(c), false.B )
+    for( r <- 1 until groupPeRow )
+      for( c <- 0 until groupPeCol - 1 )
+        groupProcessingElementVector(r)(c).io.partialSumReset := RegNext(io.partialSumReset(r + c), false.B)
 
-    //Wiring partial sum signals
-    for( r <- 0 until groupPeRow )
-      for( c <- 0 until groupPeCol )
-        groupProcessingElementVector(r)(c).io.partialSumReset := RegNext( io.partialSumReset(r)(c), false.B )
+
+    for (i <- 0 until numPropagateOutput)
+      for (r <- 0 until groupPeRow)
+        for (c <- 0 until groupPeCol)
+          if (r - 1 == i && groupPeCol - 2 > c) {
+            groupProcessingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
+          } else if (r - 1 == i && groupPeCol - 2 - c == i) {
+            groupProcessingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
+          } else if (i < r - 1 && groupPeCol - 2 - c == i) {
+            groupProcessingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
+          }
 
   } else {
 
     //Wiring Input A
-    for( r <- 0 until groupPeRow )
-      for( a <- 0 until vectorPeRow )
-        for( p <- 0 until numPeMultiplier ) {
+    for (r <- 0 until groupPeRow)
+      for (a <- 0 until vectorPeRow)
+        for (p <- 0 until numPeMultiplier) {
           val multiplierIndex = a * numPeMultiplier + p
           groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
         }
 
     //Wiring B
-    for( c <- 0 until groupPeCol)
-      for( b <- 0 until vectorPeCol)
+    for (c <- 0 until groupPeCol)
+      for (b <- 0 until vectorPeCol)
         for (p <- 0 until numPeMultiplier) {
           val multiplierIndex = b * numPeMultiplier + p
-          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier ))
+          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
         }
 
-    //Wiring propagate signal
-    for( r <- 0 until groupPeRow - 1 )
-      for( c<- 0 until groupPeCol - 1 )
-        groupProcessingElementVector(r + 1)(c).io.propagateOutput.get := io.propagateOutput(r)(c)
 
-    //Wiring partial sum signals
-    for( r <- 0 until groupPeRow )
-      for( c <- 0 until groupPeCol )
-        groupProcessingElementVector(r)(c).io.partialSumReset := io.partialSumReset(r)(c)
+    for (r <- 0 until groupPeRow)
+      for (c <- 0 until groupPeCol)
+        groupProcessingElementVector(r)(c).io.partialSumReset := io.partialSumReset(r + c)
 
+    for (i <- 0 until numPropagateOutput)
+      for (r <- 0 until groupPeRow)
+        for (c <- 0 until groupPeCol)
+          if (r - 1 == i && groupPeCol - 2 > c) {
+            groupProcessingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+          } else if (r - 1 == i && groupPeCol - 2 - c == i) {
+            groupProcessingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+          } else if (i < r - 1 && groupPeCol - 2 - c == i) {
+            groupProcessingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+          }
   }
 
   //Wiring Input A
@@ -135,8 +150,6 @@ class SystolicTensorArray[T <: Data](
           groupProcessingElementVector(r)(c).io.inputB(multiplierIndex) := groupProcessingElementVector(r-1)(c).io.outputB.get(multiplierIndex)
         }
 
-  //TODO clean this code
-  //Wiring Output
   for(i <- 0 until groupPeRow; j <- 0 until groupPeCol; k <- 0 until numProcessingElemnt) {
 
     //Case0

@@ -21,6 +21,8 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
+  val numPartialSumReset = groupPeRow + groupPeCol - 1
+  val numPropagateOutput: Int = groupPeCol - 1
   val numOutput: Int = (groupPeCol + groupPeRow - 1)* vectorPeRow * vectorPeCol
   val outputTypeC = portConfig.getStaOutputTypeC
 
@@ -32,8 +34,9 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
-    val propagateOutput =  Input(Vec(groupPeRow - 1, Vec(groupPeCol - 1, Bool())))
-    val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
+    val propagateOutput =  Input(Vec(numPropagateOutput, Bool()))
+//    val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
+    val partialSumReset =  Input(Vec(numPartialSumReset, Bool()))
     val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
@@ -45,10 +48,10 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   postProcessor.io.input := systolicTensorArray.io.outputC
 
   //Wiring propagate signal
-  systolicTensorArray.io.propagateOutput := RegNext( io.propagateOutput, VecInit.fill(groupPeRow-1)(VecInit.fill(groupPeCol-1)(false.B)))
+  systolicTensorArray.io.partialSumReset := RegNext(io.partialSumReset, VecInit.fill(numPartialSumReset)(false.B))
 
   //Wiring partial sum signals
-  systolicTensorArray.io.partialSumReset := RegNext( io.partialSumReset, VecInit.fill(groupPeRow)(VecInit.fill(groupPeCol)(false.B)) )
+  systolicTensorArray.io.propagateOutput := RegNext( io.propagateOutput, VecInit.fill(numPropagateOutput)(false.B))
 
   //Wiring Output
   io.outputC := postProcessor.io.output
