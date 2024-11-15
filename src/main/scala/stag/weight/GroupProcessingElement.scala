@@ -1,6 +1,7 @@
 package stag.weight
 
 import chisel3._
+import chisel3.util.log2Ceil
 import stag.common.{PortConfig, Arithmetic}
 
 class GroupProcessingElement[T <: Data](
@@ -21,7 +22,7 @@ class GroupProcessingElement[T <: Data](
   val outputTypeC = if(portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
   else
-    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeRow + (groupPeRowIndex * vectorPeRow))
+    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + log2Ceil(vectorPeRow + groupPeRowIndex * vectorPeRow) )
 
   val vectorProcessingElementVector = (withOutputB, withInputC) match {
     case(false, false) =>

@@ -84,44 +84,26 @@ object MainApp extends App {
     val bitWidthPortB = config.getInt("Port B").get
     val bitWidthMultiplierOutput = bitWidthPortA + bitWidthPortB
     val bitWidthAdderTreeOutput = bitWidthMultiplierOutput + log2Ceil(arrayConfig.numPeMultiplier)
-    val bitWidthPortC = config.getInt("Port C").getOrElse(-1)
+    var enableUserBitWidth = true
 
-    val enableUserBitWidth = if(bitWidthPortC.isValidInt){
-      if (bitWidthPortC == -1)
-        false
-      else
-        true
-    } else
-      false
+    val bitWidthPortC = config.getInt("Port C").getOrElse{
 
-    if(enableUserBitWidth)
-      println("Use user define bit width")
-    else
-      println("Use default bit width")
+      enableUserBitWidth = false
 
-    val staBitWidthPortC = if(enableUserBitWidth) {
-      config.getInt("Port C").get
-    } else {
       dataflow match {
         case Dataflow.Is =>
-          bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeCol * arrayConfig.vectorPeCol
+          bitWidthAdderTreeOutput + log2Ceil(arrayConfig.groupPeCol * arrayConfig.vectorPeCol)
 
         case Dataflow.Os =>
           if(bitWidthPortA > bitWidthPortB)
             bitWidthPortA
           else
             bitWidthPortB
-
         case Dataflow.Ws =>
-          bitWidthPortA + bitWidthPortB + log2Ceil(arrayConfig.numPeMultiplier) + arrayConfig.groupPeRow * arrayConfig.vectorPeRow
-
+          bitWidthAdderTreeOutput + log2Ceil(arrayConfig.groupPeRow * arrayConfig.vectorPeRow)
       }
-    }
 
-    assert(staBitWidthPortC >= bitWidthPortA,
-      s"Output port bit width is too small output port C: $staBitWidthPortC input port A: $bitWidthPortA")
-    assert(staBitWidthPortC >= bitWidthPortB,
-      s"Output port bit width is too small output port C: $staBitWidthPortC input port B: $bitWidthPortB")
+    }
 
     val portBitWidthInfo = PortBitWidthInfo(
       bitWidthPortA,
@@ -129,7 +111,7 @@ object MainApp extends App {
       bitWidthMultiplierOutput,
       bitWidthAdderTreeOutput,
       enableUserBitWidth,
-      staBitWidthPortC
+      bitWidthPortC
     )
 
 
@@ -194,7 +176,7 @@ object MainApp extends App {
     ChiselStage.emitSystemVerilogFile(
       rtlGenerator,
 //      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName/", "-split-verilog")
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=./output/$generatedFileName")
+      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=./output/$generatedFileName.sv")
     )
 
   }

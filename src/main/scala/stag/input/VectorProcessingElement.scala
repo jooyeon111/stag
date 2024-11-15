@@ -1,6 +1,7 @@
 package stag.input
 
 import chisel3._
+import chisel3.util.log2Ceil
 import stag.common.{Mac, Arithmetic, PortConfig}
 
 class VectorProcessingElement[T <: Data](
@@ -16,7 +17,7 @@ class VectorProcessingElement[T <: Data](
   val outputTypeC = if (portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
   else
-    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + vectorPeColIndex + (groupPeColIndex * vectorPeCol))
+    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + log2Ceil(vectorPeColIndex + groupPeColIndex * vectorPeCol))
 
   val io =  IO(new Bundle {
 
