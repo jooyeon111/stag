@@ -17,7 +17,9 @@ class VectorProcessingElement[T <: Data](
   val outputTypeC = if (portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
   else
-    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + log2Ceil(vectorPeColIndex + groupPeColIndex * vectorPeCol))
+    portConfig.calculateOutputTypeC(
+      portConfig.adderTreeOutputTypeType.getWidth + log2Ceil( (vectorPeColIndex + 1) + groupPeColIndex * vectorPeCol)
+    )
 
   val io =  IO(new Bundle {
 

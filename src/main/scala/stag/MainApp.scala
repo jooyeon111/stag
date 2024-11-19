@@ -95,10 +95,8 @@ object MainApp extends App {
           bitWidthAdderTreeOutput + log2Ceil(arrayConfig.groupPeCol * arrayConfig.vectorPeCol)
 
         case Dataflow.Os =>
-          if(bitWidthPortA > bitWidthPortB)
-            bitWidthPortA
-          else
-            bitWidthPortB
+          throw new IllegalArgumentException("Output stationary needs output bit width as a parameter")
+
         case Dataflow.Ws =>
           bitWidthAdderTreeOutput + log2Ceil(arrayConfig.groupPeRow * arrayConfig.vectorPeRow)
       }
@@ -115,7 +113,13 @@ object MainApp extends App {
     )
 
 
-    AppConfig(hierarchy = hierarchy, dataflow = dataflow, arrayConfig = arrayConfig, integerType = integerType, portBitWidthInfo = portBitWidthInfo)
+    AppConfig(
+      hierarchy = hierarchy,
+      dataflow = dataflow,
+      arrayConfig = arrayConfig,
+      integerType = integerType,
+      portBitWidthInfo = portBitWidthInfo
+    )
 
   }
 
@@ -130,7 +134,6 @@ object MainApp extends App {
         generateRtlForType[UInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, (w:Int) => UInt(w.W))
     }
   }
-
   def generateRtlForType[T <: Data](
      arrayConfig: SystolicTensorArrayConfig,
      portBitWidthInfo: PortBitWidthInfo,

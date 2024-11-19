@@ -22,7 +22,9 @@ class GroupProcessingElement[T <: Data](
   val outputTypeC = if(portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
   else
-    portConfig.calculateOutputTypeC(portConfig.adderTreeOutputTypeType.getWidth + log2Ceil(vectorPeRow + groupPeRowIndex * vectorPeRow) )
+    portConfig.calculateOutputTypeC(
+      portConfig.adderTreeOutputTypeType.getWidth + log2Ceil(vectorPeRow + groupPeRowIndex * vectorPeRow)
+    )
 
   val vectorProcessingElementVector = (withOutputB, withInputC) match {
     case(false, false) =>
