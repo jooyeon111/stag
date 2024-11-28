@@ -6,7 +6,9 @@ class AdderTree[T <: Data](
   numPeMultiplier: Int,
   inputType: T,
   outputType: T
-)(implicit ev: Arithmetic[T]) extends Module{
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+
+  override val desiredName: String = camelToSnake(name)
 
   val io = IO(new Bundle {
     val input = Input(Vec(numPeMultiplier, inputType))

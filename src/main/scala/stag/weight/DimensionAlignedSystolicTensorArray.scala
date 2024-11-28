@@ -79,6 +79,6 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   systolicTensorArray.io.propagateB := RegNext(io.propagateB, VecInit.fill(numPropagateB)(false.B))
 
   //Wiring Output
-  io.outputC := systolicTensorArray.io.outputC
+  io.outputC := postProcessor.io.output
 
 }

@@ -2,7 +2,7 @@ package stag.weight
 
 import chisel3._
 import chisel3.util.log2Ceil
-import stag.common.{Arithmetic, Mac, PortConfig}
+import stag.common.{Arithmetic, Mac, PortConfig, ParallelMultiplier}
 
 class VectorProcessingElement[T <: Data](
   groupPeRowIndex: Int,
@@ -13,6 +13,8 @@ class VectorProcessingElement[T <: Data](
   withInputC: Boolean,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T] ) extends Module {
+
+  override def desiredName: String = if(numPeMultiplier == 1) "ProcessingElement" else "VectorProcessingElement"
 
   val outputTypeC = if(portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC
@@ -37,13 +39,6 @@ class VectorProcessingElement[T <: Data](
 
   })
 
-  val mac = Module(new Mac(
-    numPeMultiplier,
-    portConfig.inputTypeA,
-    portConfig.inputTypeB,
-    portConfig.multiplierOutputType,
-    portConfig.adderTreeOutputTypeType
-  ))
   val registerB = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeB.getWidth)))
   val nextRegisterB = WireDefault(registerB)
 
@@ -55,12 +50,39 @@ class VectorProcessingElement[T <: Data](
   if(withOutputB)
     io.outputB.get := registerB
 
-  mac.io.inputA := io.inputA
-  mac.io.inputB := registerB
+
+  val multiplyResult = if (numPeMultiplier == 1){
+
+    val multiplier = Module(new ParallelMultiplier(
+      numPeMultiplier = numPeMultiplier,
+      portConfig.inputTypeA,
+      portConfig.inputTypeB,
+      portConfig.multiplierOutputType
+    ))
+
+    multiplier.io.inputA(0) := io.inputA(0)
+    multiplier.io.inputB(0) := registerB(0)
+    multiplier.io.output(0)
+
+  } else {
+
+    val mac = Module(new Mac(
+      numPeMultiplier = numPeMultiplier,
+      portConfig.inputTypeA,
+      portConfig.inputTypeB,
+      portConfig.multiplierOutputType,
+      portConfig.adderTreeOutputTypeType
+    ))
+
+    mac.io.inputA := io.inputA
+    mac.io.inputB := registerB
+    mac.io.output
+
+  }
 
   if(withInputC)
-    io.outputC := RegNext(ev.add(mac.io.output, io.inputC.get), ev.zero(outputTypeC.getWidth))
+    io.outputC := RegNext(ev.add(multiplyResult, io.inputC.get), ev.zero(outputTypeC.getWidth))
   else
-    io.outputC := RegNext(mac.io.output, ev.zero(outputTypeC.getWidth))
+    io.outputC := RegNext(multiplyResult, ev.zero(outputTypeC.getWidth))
 
 }

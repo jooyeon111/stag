@@ -1,7 +1,7 @@
 test:
 	#sbt "runMain stag.MainApp input_stationary.cfg"
-	#sbt "runMain stag.MainApp os_8x8x1x1x1.cfg"
-	sbt "runMain stag.MainApp weight_stationary.cfg"
+	sbt "runMain stag.MainApp output_stationary.cfg"
+	#sbt "runMain stag.MainApp weight_stationary.cfg"
 
 all:
 	sbt "runMain stag.MainApp is_8x8x4x1x2.cfg"

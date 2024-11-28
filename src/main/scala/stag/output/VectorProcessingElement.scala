@@ -1,14 +1,15 @@
 package stag.output
 
 import chisel3._
-import stag.common.{ Mac, PortConfig, Arithmetic}
+import stag.common.{Mac, PortConfig, Arithmetic, ParallelMultiplier}
 
 class VectorProcessingElement[T <: Data](
   numPeMultiplier: Int,
   portConfig: PortConfig[T],
 )( implicit ev: Arithmetic[T] ) extends Module {
 
-  val mac = Module(new Mac(numPeMultiplier, portConfig.inputTypeA, portConfig.inputTypeB, portConfig.multiplierOutputType, portConfig.adderTreeOutputTypeType))
+  override def desiredName: String = if(numPeMultiplier == 1) "ProcessingElement" else "VectorProcessingElement"
+
   val outputTypeC = portConfig.getStaOutputTypeC
   val outputRegister = RegInit(ev.zero(outputTypeC.getWidth))
 
@@ -19,8 +20,33 @@ class VectorProcessingElement[T <: Data](
     val output = Output(outputTypeC)
   })
 
-  mac.io.inputA := io.inputA
-  mac.io.inputB := io.inputB
+  val multiplyResult = if (numPeMultiplier == 1){
+
+    val multiplier = Module(new ParallelMultiplier(
+      numPeMultiplier = numPeMultiplier,
+      portConfig.inputTypeA,
+      portConfig.inputTypeB,
+      portConfig.multiplierOutputType
+    ))
+
+    multiplier.io.inputA(0) := io.inputA(0)
+    multiplier.io.inputB(0) := io.inputB(0)
+    multiplier.io.output(0)
+
+  } else {
+
+    val mac = Module(new Mac(
+      numPeMultiplier = numPeMultiplier,
+      portConfig.inputTypeA,
+      portConfig.inputTypeB,
+      portConfig.multiplierOutputType,
+      portConfig.adderTreeOutputTypeType
+    ))
+    mac.io.inputA := io.inputA
+    mac.io.inputB := io.inputB
+    mac.io.output
+
+  }
 
   val partialSum = WireDefault(outputRegister)
 
@@ -28,7 +54,7 @@ class VectorProcessingElement[T <: Data](
     partialSum := ev.zero(outputTypeC.getWidth)
   }
 
-  outputRegister := ev.add(mac.io.output, partialSum)
+  outputRegister := ev.add(multiplyResult, partialSum)
   io.output := outputRegister
 
 }

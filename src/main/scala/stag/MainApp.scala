@@ -175,11 +175,12 @@ object MainApp extends App {
       case (StaHierarchy.DimensionAlignedSta, Dataflow.Ws) =>
         new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
     }
-    
+
+    //TODO split verilog parametrization
     ChiselStage.emitSystemVerilogFile(
       rtlGenerator,
-//      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName/", "-split-verilog")
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=./output/$generatedFileName.sv")
+      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName/", "-split-verilog")
+//      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=./output/$generatedFileName.sv")
     )
 
   }

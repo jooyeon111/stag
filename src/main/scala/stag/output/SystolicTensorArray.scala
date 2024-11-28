@@ -31,28 +31,26 @@ class SystolicTensorArray[T <: Data](
   val numPartialSumReset = groupPeRow + groupPeCol - 1
   val numPropagateOutput: Int = groupPeCol - 1
 
-  val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol)( (row,col) => if( row == 0 ){
-      if( col == groupPeCol - 1){
-        Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withOutputA = false, withOutputB = true, withInputC = false,  portConfig))
-      } else {
-        Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withOutputA = true, withOutputB = true, withInputC = false,  portConfig))
-      }
+  val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol) { (row, col) =>
 
-    } else if ( 0 < row && row < groupPeRow - 1){
+    val isFirstRow = row == 0
+    val isLastRow = row == groupPeRow - 1
+    val isLastCol = col == groupPeCol - 1
 
-      if( col == groupPeCol - 1){
-        Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withOutputA = false, withOutputB = true, withInputC = false,  portConfig))
-      } else {
-        Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withOutputA = true, withOutputB = true, withInputC = true,  portConfig))
-      }
+    val withOutputA = !isLastCol
+    val withOutputB = !isLastRow
+    val withInputC = !isFirstRow && !isLastCol
 
-    } else {
-      if( col == groupPeCol - 1){
-        Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withOutputA = false, withOutputB = false, withInputC = false,  portConfig))
-      } else {
-        Module(new GroupProcessingElement(vectorPeRow, vectorPeCol, numPeMultiplier, withOutputA = true, withOutputB = false, withInputC = true,  portConfig))
-      }
-    })
+    Module(new GroupProcessingElement(
+      vectorPeRow = vectorPeRow,
+      vectorPeCol = vectorPeCol,
+      numPeMultiplier = numPeMultiplier,
+      withOutputA = withOutputA,
+      withOutputB = withOutputB,
+      withInputC = withInputC,
+      portConfig = portConfig
+    ))
+  }
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))

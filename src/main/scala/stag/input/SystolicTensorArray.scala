@@ -30,79 +30,103 @@ class SystolicTensorArray[T <: Data](
   val numOutput : Int = groupPeRow * vectorPeRow
   val outputTypeC = portConfig.getStaOutputTypeC
 
-  val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((groupPeRowIndex, groupPeColIndex) =>
-    if(groupPeRowIndex < groupPeRow - 1){
-      if(groupPeColIndex == 0){
-        Module(new GroupProcessingElement(
-          groupPeColIndex,
-          vectorPeRow,
-          vectorPeCol,
-          numPeMultiplier,
-          withOutputA = true,
-          withOutputB = true,
-          withInputC = false,
-          portConfig
-        ))
-      } else if(groupPeColIndex < groupPeCol - 1){
-        Module(new GroupProcessingElement(
-          groupPeColIndex,
-          vectorPeRow,
-          vectorPeCol,
-          numPeMultiplier,
-          withOutputA = true,
-          withOutputB = true,
-          withInputC = true,
-          portConfig
-        ))
-      } else {
-        Module(new GroupProcessingElement(
-          groupPeColIndex,
-          vectorPeRow,
-          vectorPeCol,
-          numPeMultiplier,
-          withOutputA = false,
-          withOutputB = true,
-          withInputC = true,
-          portConfig
-        ))
-      }
-    } else {
-      if(groupPeColIndex == 0){
-        Module(new GroupProcessingElement(
-          groupPeColIndex,
-          vectorPeRow,
-          vectorPeCol,
-          numPeMultiplier,
-          withOutputA = true,
-          withOutputB = false,
-          withInputC = false,
-          portConfig
-        ))
-      } else if(groupPeColIndex < groupPeCol - 1){
-        Module(new GroupProcessingElement(
-          groupPeColIndex,
-          vectorPeRow,
-          vectorPeCol,
-          numPeMultiplier,
-          withOutputA = true,
-          withOutputB = false,
-          withInputC = true,
-          portConfig
-        ))
-      } else {
-        Module(new GroupProcessingElement(
-          groupPeColIndex,
-          vectorPeRow,
-          vectorPeCol,
-          numPeMultiplier,
-          withOutputA = false,
-          withOutputB = false,
-          withInputC = true,
-          portConfig
-        ))
-      }
-    }
-  )
+  val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol){ (rowIndex, colIndex) =>
+
+    val isLastRow = rowIndex == groupPeRow - 1
+    val isFirstCol = colIndex == 0
+    val isLastCol = colIndex == groupPeCol - 1
+
+    val withOutputA = !isLastCol
+    val withOutputB = !isLastRow
+    val withInputC = !isFirstCol
+
+    Module(new GroupProcessingElement(
+      groupPeColIndex = colIndex,
+      vectorPeRow = vectorPeRow,
+      vectorPeCol = vectorPeCol,
+      numPeMultiplier = numPeMultiplier,
+      withOutputA = withOutputA,
+      withOutputB = withOutputB,
+      withInputC = withInputC,
+      portConfig = portConfig
+    ))
+
+
+  }
+//
+//  val groupProcessingElementVector= Vector.tabulate(groupPeRow, groupPeCol)((groupPeRowIndex, groupPeColIndex) =>
+//    if(groupPeRowIndex < groupPeRow - 1){
+//      if(groupPeColIndex == 0){
+//        Module(new GroupProcessingElement(
+//          groupPeColIndex,
+//          vectorPeRow,
+//          vectorPeCol,
+//          numPeMultiplier,
+//          withOutputA = true,
+//          withOutputB = true,
+//          withInputC = false,
+//          portConfig
+//        ))
+//      } else if(groupPeColIndex < groupPeCol - 1){
+//        Module(new GroupProcessingElement(
+//          groupPeColIndex,
+//          vectorPeRow,
+//          vectorPeCol,
+//          numPeMultiplier,
+//          withOutputA = true,
+//          withOutputB = true,
+//          withInputC = true,
+//          portConfig
+//        ))
+//      } else {
+//        Module(new GroupProcessingElement(
+//          groupPeColIndex,
+//          vectorPeRow,
+//          vectorPeCol,
+//          numPeMultiplier,
+//          withOutputA = false,
+//          withOutputB = true,
+//          withInputC = true,
+//          portConfig
+//        ))
+//      }
+//    } else {
+//      if(groupPeColIndex == 0){
+//        Module(new GroupProcessingElement(
+//          groupPeColIndex,
+//          vectorPeRow,
+//          vectorPeCol,
+//          numPeMultiplier,
+//          withOutputA = true,
+//          withOutputB = false,
+//          withInputC = false,
+//          portConfig
+//        ))
+//      } else if(groupPeColIndex < groupPeCol - 1){
+//        Module(new GroupProcessingElement(
+//          groupPeColIndex,
+//          vectorPeRow,
+//          vectorPeCol,
+//          numPeMultiplier,
+//          withOutputA = true,
+//          withOutputB = false,
+//          withInputC = true,
+//          portConfig
+//        ))
+//      } else {
+//        Module(new GroupProcessingElement(
+//          groupPeColIndex,
+//          vectorPeRow,
+//          vectorPeCol,
+//          numPeMultiplier,
+//          withOutputA = false,
+//          withOutputB = false,
+//          withInputC = true,
+//          portConfig
+//        ))
+//      }
+//    }
+//  )
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))

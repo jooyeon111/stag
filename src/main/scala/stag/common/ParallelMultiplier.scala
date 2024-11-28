@@ -7,7 +7,9 @@ class ParallelMultiplier[T <: Data](
   inputTypeA: T,
   inputTypeB: T,
   outputType: T
-)(implicit ev: Arithmetic[T]) extends Module {
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming {
+
+  override def desiredName: String = camelToSnake( if(numPeMultiplier == 1) "Multiplier" else "ParallelMultiplier" )
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numPeMultiplier, inputTypeA ))

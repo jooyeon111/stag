@@ -10,6 +10,8 @@ class Mac[T <: Data](
   adderTreeOutputType: T,
 )( implicit ev: Arithmetic[T]) extends Module {
 
+  require(numPeMultiplier >= 2, " At least 2 number of multipliers are needed for multiply and accumulation logic")
+
   val io = IO (new Bundle {
     val inputA = Input(Vec(numPeMultiplier, inputTypeA))
     val inputB = Input(Vec(numPeMultiplier, inputTypeB))

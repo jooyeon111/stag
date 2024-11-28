@@ -26,144 +26,165 @@ class GroupProcessingElement[T <: Data](
       portConfig.adderTreeOutputTypeType.getWidth + log2Ceil(vectorPeRow + groupPeRowIndex * vectorPeRow)
     )
 
-  val vectorProcessingElementVector = (withOutputB, withInputC) match {
-    case(false, false) =>
-      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-        if(vectorPeRowIndex == 0){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = false,
-            portConfig
-          ))
-        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        } else {
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = false,
-            withInputC = true,
-            portConfig
-          ))
-        }
-      }}
-    case(false, true) =>
-      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-        if(vectorPeRowIndex == 0){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        } else {
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = false,
-            withInputC = true,
-            portConfig
-          ))
-        }
-      }}
-    case(true, false) =>
-      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-        if(vectorPeRowIndex == 0){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = false,
-            portConfig
-          ))
-        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        } else {
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        }
-      }}
-    case(true, true) =>
-      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-        if(vectorPeRowIndex == 0){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        } else {
-          Module(new VectorProcessingElement(
-            groupPeRowIndex,
-            vectorPeRowIndex,
-            vectorPeRow,
-            numPeMultiplier,
-            withOutputB = true,
-            withInputC = true,
-            portConfig
-          ))
-        }
-      }}
+  val vectorProcessingElementVector = Vector.tabulate(vectorPeRow, vectorPeCol) { (vectorPeRowIndex, _) =>
+    // Determine position flags
+    val isFirstRow = vectorPeRowIndex == 0
+    val isLastRow = vectorPeRowIndex == vectorPeRow - 1
+
+    // Calculate PE configuration based on position and input parameters
+    val peWithOutputB = if (!withOutputB && isLastRow) false else true
+    val peWithInputC = if (!withInputC && isFirstRow) false else true
+
+    Module(new VectorProcessingElement(
+      groupPeRowIndex = groupPeRowIndex,
+      vectorPeRowIndex = vectorPeRowIndex,
+      vectorPeRow = vectorPeRow,
+      numPeMultiplier = numPeMultiplier,
+      withOutputB = peWithOutputB,
+      withInputC = peWithInputC,
+      portConfig = portConfig
+    ))
+
   }
+
+//  val vectorProcessingElementVector = (withOutputB, withInputC) match {
+//    case(false, false) =>
+//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
+//        if(vectorPeRowIndex == 0){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = false,
+//            portConfig
+//          ))
+//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        } else {
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = false,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        }
+//      }}
+//    case(false, true) =>
+//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
+//        if(vectorPeRowIndex == 0){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        } else {
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = false,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        }
+//      }}
+//    case(true, false) =>
+//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
+//        if(vectorPeRowIndex == 0){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = false,
+//            portConfig
+//          ))
+//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        } else {
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        }
+//      }}
+//    case(true, true) =>
+//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
+//        if(vectorPeRowIndex == 0){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        } else {
+//          Module(new VectorProcessingElement(
+//            groupPeRowIndex,
+//            vectorPeRowIndex,
+//            vectorPeRow,
+//            numPeMultiplier,
+//            withOutputB = true,
+//            withInputC = true,
+//            portConfig
+//          ))
+//        }
+//      }}
+//  }
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
