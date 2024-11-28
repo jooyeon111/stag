@@ -13,7 +13,7 @@ class GroupProcessingElement[T <: Data](
   withOutputB: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T]
-)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming with ProcessingElementIo[T]{
 
   override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
@@ -43,11 +43,15 @@ class GroupProcessingElement[T <: Data](
       numPeMultiplier = numPeMultiplier,
       withOutputA = peWithOutputA,
       withInputC = peWithInputC,
+      withOutputB = false,
       portConfig = portConfig
     ))
   }
 
-  val io = IO(new Bundle {
+  override type OutputType = Vec[T]
+  override type PropagateType = Vec[Bool]
+
+  override val io = IO(new Bundle {
 
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
@@ -58,6 +62,7 @@ class GroupProcessingElement[T <: Data](
     val outputA = if(withOutputA) Some(Output(Vec(numInputA, portConfig.inputTypeA))) else None
     val outputB = if(withOutputB) Some(Output(Vec(numInputB, portConfig.inputTypeB))) else None
     val outputC = Output(Vec(numOutput, outputTypeC))
+
   })
 
   //Wiring Input A

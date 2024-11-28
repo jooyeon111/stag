@@ -13,7 +13,7 @@ class GroupProcessingElement[T <: Data](
   withOutputB: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T]
-)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming {
+)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming with ProcessingElementIo[T] {
 
   override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
@@ -44,149 +44,14 @@ class GroupProcessingElement[T <: Data](
       numPeMultiplier = numPeMultiplier,
       withOutputB = peWithOutputB,
       withInputC = peWithInputC,
+      withOutputA = false,
       portConfig = portConfig
     ))
 
   }
 
-//  val vectorProcessingElementVector = (withOutputB, withInputC) match {
-//    case(false, false) =>
-//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-//        if(vectorPeRowIndex == 0){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = false,
-//            portConfig
-//          ))
-//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        } else {
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = false,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        }
-//      }}
-//    case(false, true) =>
-//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-//        if(vectorPeRowIndex == 0){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        } else {
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = false,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        }
-//      }}
-//    case(true, false) =>
-//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-//        if(vectorPeRowIndex == 0){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = false,
-//            portConfig
-//          ))
-//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        } else {
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        }
-//      }}
-//    case(true, true) =>
-//      Vector.tabulate(vectorPeRow, vectorPeCol){ (vectorPeRowIndex, _) => {
-//        if(vectorPeRowIndex == 0){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        } else if( 0 < vectorPeRowIndex && vectorPeRowIndex < vectorPeRow - 1){
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        } else {
-//          Module(new VectorProcessingElement(
-//            groupPeRowIndex,
-//            vectorPeRowIndex,
-//            vectorPeRow,
-//            numPeMultiplier,
-//            withOutputB = true,
-//            withInputC = true,
-//            portConfig
-//          ))
-//        }
-//      }}
-//  }
+  override type OutputType = Vec[T]
+  override type PropagateType = Vec[Bool]
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))

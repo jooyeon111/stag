@@ -9,10 +9,11 @@ class VectorProcessingElement[T <: Data](
   vectorPeRowIndex: Int,
   vectorPeRow: Int,
   numPeMultiplier: Int,
+  withOutputA: Boolean,
   withOutputB: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T],
-)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming{
+)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming with ProcessingElementIo[T] {
 
   override def desiredName: String = camelToSnake( if(numPeMultiplier == 1) "ProcessingElement" else "VectorProcessingElement" )
 
@@ -22,6 +23,10 @@ class VectorProcessingElement[T <: Data](
     portConfig.calculateOutputTypeC(
       portConfig.adderTreeOutputTypeType.getWidth + log2Ceil( (vectorPeRowIndex + 1) + groupPeRowIndex * vectorPeRow)
     )
+
+  override type OutputType = T
+  override type PropagateType = Bool
+
 
   val io =  IO(new Bundle {
 
@@ -34,11 +39,19 @@ class VectorProcessingElement[T <: Data](
     val propagateB: Bool = Input(Bool())
 
     //Output
+    val outputA = if(withOutputA) Some (Output(Vec(numPeMultiplier, portConfig.inputTypeA))) else None
     val outputB = if(withOutputB) Some (Output(Vec(numPeMultiplier, portConfig.inputTypeB))) else None
     val outputC = Output(outputTypeC)
 
   })
 
+  //Port A
+  if(withOutputA){
+    val registerA = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeA.getWidth)))
+    io.outputA.get := registerA
+  }
+
+  //Port B
   val registerB = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeB.getWidth)))
   val nextRegisterB = WireDefault(registerB)
 
