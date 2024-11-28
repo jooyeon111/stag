@@ -1,7 +1,7 @@
 package stag.output
 
 import chisel3._
-import stag.common.{ PortConfig, PreProcessor, SystolicTensorArrayConfig, Arithmetic}
+import stag.common.{Arithmetic, PortConfig, PreProcessor, PreProcessorType, SystolicTensorArrayConfig, VerilogNaming}
 
 //Pod = Pre Processing Unit +  Systolic Tensor Array + Post Processing Unit
 class DimensionAlignedSystolicTensorArray[T <: Data](
@@ -12,8 +12,8 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   numPeMultiplier : Int,
   dedicatedName: String,
   portConfig: PortConfig[T],
-)(implicit ev: Arithmetic[T]) extends Module {
-
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming
+ {
   def this(arrayConfig: SystolicTensorArrayConfig, dedicatedName: String, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
     this(arrayConfig.groupPeRow, arrayConfig.groupPeCol, arrayConfig.vectorPeRow, arrayConfig.vectorPeCol, arrayConfig.numPeMultiplier, dedicatedName, portConfig)
 
@@ -26,8 +26,22 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
   val numOutput: Int = (groupPeCol + groupPeRow - 1)* vectorPeRow * vectorPeCol
   val outputTypeC = portConfig.getStaOutputTypeC
 
-  val preProcessorInputA = Module (new PreProcessor(groupPeRow, vectorPeRow, numPeMultiplier, skewFlag = true, portConfig.inputTypeA))
-  val preProcessorInputB = Module (new PreProcessor(groupPeCol, vectorPeCol, numPeMultiplier, skewFlag = true, portConfig.inputTypeB))
+  val preProcessorInputA = Module (new PreProcessor(
+    groupPeRow,
+    vectorPeRow,
+    numPeMultiplier,
+    skewFlag = true,
+    PreProcessorType.A,
+    portConfig.inputTypeA
+  ))
+  val preProcessorInputB = Module (new PreProcessor(
+    groupPeCol,
+    vectorPeCol,
+    numPeMultiplier,
+    skewFlag = true,
+    PreProcessorType.B,
+    portConfig.inputTypeB
+  ))
   val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
   val postProcessor = Module (new DeskewBuffer(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, outputTypeC))
 

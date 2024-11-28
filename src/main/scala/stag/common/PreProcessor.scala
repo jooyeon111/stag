@@ -8,8 +8,19 @@ class PreProcessor[T <: Data](
   blockConfig: Int,
   numPeMultiplier: Int,
   skewFlag: Boolean,
+  preProcessorType: PreProcessorType.Value,
   portType: T
-)( implicit ev: Arithmetic[T] ) extends Module {
+)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming {
+
+  override val desiredName:String = camelToSnake(
+    if(preProcessorType == PreProcessorType.A){
+      this.getClass.getSimpleName + "A"
+    } else if (preProcessorType == PreProcessorType.B){
+      this.getClass.getSimpleName + "B"
+    } else {
+      throw new Exception("Wrong pre processor type")
+    }
+  )
 
   val numPort: Int = arrayConfig * blockConfig * numPeMultiplier
 

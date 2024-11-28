@@ -2,7 +2,7 @@ package stag.output
 
 import chisel3._
 import chisel3.util.ShiftRegister
-import stag.common.Arithmetic
+import stag.common.{Arithmetic, VerilogNaming}
 
 class DeskewBuffer[T <: Data](
   groupPeRow: Int,
@@ -10,7 +10,9 @@ class DeskewBuffer[T <: Data](
   vectorPeRow: Int,
   vectorPeCol: Int,
   portType: T
-)( implicit ev: Arithmetic[T]) extends Module {
+)( implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+
+  override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
   val numPort = (groupPeRow + groupPeCol - 1) * vectorPeRow * vectorPeCol
 

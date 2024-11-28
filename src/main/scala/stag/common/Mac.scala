@@ -8,7 +8,9 @@ class Mac[T <: Data](
   inputTypeB: T,
   multiplierOutputType: T,
   adderTreeOutputType: T,
-)( implicit ev: Arithmetic[T]) extends Module {
+)( implicit ev: Arithmetic[T]) extends Module with VerilogNaming {
+
+  override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
   require(numPeMultiplier >= 2, " At least 2 number of multipliers are needed for multiply and accumulation logic")
 

@@ -1,7 +1,7 @@
 package stag.input
 
 import chisel3._
-import stag.common.{PreProcessor, SystolicTensorArrayConfig, PortConfig, Arithmetic}
+import stag.common.{Arithmetic, PortConfig, PreProcessor, PreProcessorType, SystolicTensorArrayConfig}
 
 class DimensionAlignedSystolicTensorArray[ T <: Data ] (
   groupPeRow: Int,
@@ -37,6 +37,7 @@ class DimensionAlignedSystolicTensorArray[ T <: Data ] (
     vectorPeRow,
     numPeMultiplier,
     skewFlag = false,
+    PreProcessorType.A,
     portConfig.inputTypeA
   ))
   val preProcessorInputB = Module (new PreProcessor(
@@ -44,6 +45,7 @@ class DimensionAlignedSystolicTensorArray[ T <: Data ] (
     vectorPeCol,
     numPeMultiplier,
     skewFlag = true,
+    PreProcessorType.B,
     portConfig.inputTypeB
   ))
   val systolicTensorArray = Module (new SystolicTensorArray(

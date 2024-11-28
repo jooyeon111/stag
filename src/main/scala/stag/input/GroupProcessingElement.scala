@@ -2,7 +2,7 @@ package stag.input
 
 import chisel3._
 import chisel3.util.log2Ceil
-import stag.common.{Arithmetic, PortConfig}
+import stag.common.{Arithmetic, PortConfig, VerilogNaming}
 
 class GroupProcessingElement[T <: Data](
   groupPeColIndex: Int,
@@ -13,7 +13,9 @@ class GroupProcessingElement[T <: Data](
   withOutputB: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T]
-)(implicit ev: Arithmetic[T]) extends Module {
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+
+  override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
   val numInputA: Int = numPeMultiplier * vectorPeRow
   val numInputB: Int = numPeMultiplier * vectorPeCol

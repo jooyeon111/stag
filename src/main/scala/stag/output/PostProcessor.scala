@@ -1,7 +1,7 @@
 package stag.output
 
 import chisel3._
-import stag.common.Arithmetic
+import stag.common.{Arithmetic, VerilogNaming}
 import scala.math.{ceil, log10}
 
 class PostProcessor[ T <: Data](
@@ -10,7 +10,9 @@ class PostProcessor[ T <: Data](
   vectorPeRow: Int,
   vectorPeCol: Int,
   portType: T
-)(implicit ev: Arithmetic[T]) extends Module{
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+
+  override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
   val numInput = (groupPeRow + groupPeCol - 1) * vectorPeRow * vectorPeCol
   val muxSignalBit = ceil(log10(groupPeCol.toDouble) /  log10(2.0)).toInt

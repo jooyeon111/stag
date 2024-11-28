@@ -2,7 +2,7 @@ package stag.output
 
 import chisel3._
 import chisel3.util.{MuxCase, log2Ceil}
-import stag.common.Arithmetic
+import stag.common.{Arithmetic, VerilogNaming}
 
 import scala.math.{ceil, log10}
 
@@ -12,7 +12,9 @@ class Railway[T <: Data](
   vectorPeRow: Int,
   vectorPeCol: Int,
   portType: T
-)(implicit ev: Arithmetic[T]) extends Module{
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming {
+
+  override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
   val numInput: Int = (groupPeRow + groupPeCol - 1) * vectorPeRow * vectorPeCol
   val muxSignalBit = log2Ceil(groupPeCol)

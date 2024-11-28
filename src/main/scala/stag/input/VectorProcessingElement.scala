@@ -2,7 +2,7 @@ package stag.input
 
 import chisel3._
 import chisel3.util.log2Ceil
-import stag.common.{Arithmetic, Mac, ParallelMultiplier, PortConfig}
+import stag.common.{Arithmetic, Mac, ParallelMultiplier, PortConfig, VerilogNaming}
 
 class VectorProcessingElement[T <: Data](
   groupPeColIndex: Int,
@@ -12,9 +12,9 @@ class VectorProcessingElement[T <: Data](
   withOutputA: Boolean,
   withInputC: Boolean,
   portConfig: PortConfig[T]
-)( implicit ev: Arithmetic[T] ) extends Module {
+)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming{
 
-  override def desiredName: String = if(numPeMultiplier == 1) "ProcessingElement" else "VectorProcessingElement"
+  override def desiredName: String = camelToSnake ( if(numPeMultiplier == 1) "ProcessingElement" else "VectorProcessingElement" )
 
   val outputTypeC = if (portConfig.enableUserBitWidth)
     portConfig.getStaOutputTypeC

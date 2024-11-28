@@ -1,7 +1,7 @@
 package stag.weight
 
 import chisel3._
-import stag.common.{SystolicTensorArrayConfig, PortConfig, Arithmetic}
+import stag.common.{SystolicTensorArrayConfig, PortConfig, Arithmetic, VerilogNaming}
 
 
 class SystolicTensorArray[T <: Data](
@@ -12,7 +12,9 @@ class SystolicTensorArray[T <: Data](
   numPeMultiplier : Int,
   portConfig: PortConfig[T],
   generateRtl: Boolean
-)(implicit ev: Arithmetic[T]) extends Module{
+)(implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+
+  override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
   def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) =
     this(
