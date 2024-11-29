@@ -33,7 +33,7 @@ class SystolicTensorArray[T <: Data](
   val numPartialSumReset = groupPeRow + groupPeCol - 1
   val numPropagateOutput: Int = groupPeCol - 1
 
-  val groupProcessingElementVector = Vector.tabulate(groupPeRow, groupPeCol) { (row, col) =>
+  val processingElementVector = Vector.tabulate(groupPeRow, groupPeCol) { (row, col) =>
 
     val isFirstRow = row == 0
     val isLastRow = row == groupPeRow - 1
@@ -43,15 +43,26 @@ class SystolicTensorArray[T <: Data](
     val withOutputB = !isLastRow
     val withInputC = !isFirstRow && !isLastCol
 
-    Module(new GroupProcessingElement(
-      vectorPeRow = vectorPeRow,
-      vectorPeCol = vectorPeCol,
-      numPeMultiplier = numPeMultiplier,
-      withOutputA = withOutputA,
-      withOutputB = withOutputB,
-      withInputC = withInputC,
-      portConfig = portConfig
-    ))
+    if(vectorPeRow == 1 && vectorPeCol == 1){
+      Module(new VectorProcessingElement(
+        numPeMultiplier = numPeMultiplier,
+        withOutputA = withOutputA,
+        withOutputB = withOutputB,
+        withInputC = withInputC,
+        portConfig = portConfig,
+      ))
+    } else {
+      Module(new GroupProcessingElement(
+        vectorPeRow = vectorPeRow,
+        vectorPeCol = vectorPeCol,
+        numPeMultiplier = numPeMultiplier,
+        withOutputA = withOutputA,
+        withOutputB = withOutputB,
+        withInputC = withInputC,
+        portConfig = portConfig
+      ))
+    }: ProcessingElementIo[T]
+
   }
 
   val io = IO(new Bundle {
@@ -71,7 +82,7 @@ class SystolicTensorArray[T <: Data](
       for( a <- 0 until vectorPeRow )
         for( p <- 0 until numPeMultiplier ) {
           val multiplierIndex = a * numPeMultiplier + p
-          groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), ev.zero(portConfig.inputTypeA.getWidth))
+          processingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), ev.zero(portConfig.inputTypeA.getWidth))
         }
 
     //Wiring B
@@ -79,23 +90,23 @@ class SystolicTensorArray[T <: Data](
       for( b <- 0 until vectorPeCol)
         for (p <- 0 until numPeMultiplier) {
           val multiplierIndex = b * numPeMultiplier + p
-          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier )), ev.zero(portConfig.inputTypeB.getWidth) )
+          processingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier )), ev.zero(portConfig.inputTypeB.getWidth) )
         }
 
     for( r <- 1 until groupPeRow )
       for( c <- 0 until groupPeCol - 1 )
-        groupProcessingElementVector(r)(c).io.partialSumReset := RegNext(io.partialSumReset(r + c), false.B)
+        processingElementVector(r)(c).io.partialSumReset := RegNext(io.partialSumReset(r + c), false.B)
 
 
     for (i <- 0 until numPropagateOutput)
       for (r <- 0 until groupPeRow)
         for (c <- 0 until groupPeCol)
           if (r - 1 == i && groupPeCol - 2 > c) {
-            groupProcessingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
+            processingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
           } else if (r - 1 == i && groupPeCol - 2 - c == i) {
-            groupProcessingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
+            processingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
           } else if (i < r - 1 && groupPeCol - 2 - c == i) {
-            groupProcessingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
+            processingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
           }
 
   } else {
@@ -105,7 +116,7 @@ class SystolicTensorArray[T <: Data](
       for (a <- 0 until vectorPeRow)
         for (p <- 0 until numPeMultiplier) {
           val multiplierIndex = a * numPeMultiplier + p
-          groupProcessingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
+          processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
         }
 
     //Wiring B
@@ -113,23 +124,23 @@ class SystolicTensorArray[T <: Data](
       for (b <- 0 until vectorPeCol)
         for (p <- 0 until numPeMultiplier) {
           val multiplierIndex = b * numPeMultiplier + p
-          groupProcessingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
+          processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
         }
 
 
     for (r <- 0 until groupPeRow)
       for (c <- 0 until groupPeCol)
-        groupProcessingElementVector(r)(c).io.partialSumReset := io.partialSumReset(r + c)
+        processingElementVector(r)(c).io.partialSumReset := io.partialSumReset(r + c)
 
     for (i <- 0 until numPropagateOutput)
       for (r <- 0 until groupPeRow)
         for (c <- 0 until groupPeCol)
           if (r - 1 == i && groupPeCol - 2 > c) {
-            groupProcessingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+            processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
           } else if (r - 1 == i && groupPeCol - 2 - c == i) {
-            groupProcessingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+            processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
           } else if (i < r - 1 && groupPeCol - 2 - c == i) {
-            groupProcessingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+            processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
           }
   }
 
@@ -139,7 +150,7 @@ class SystolicTensorArray[T <: Data](
       for ( a <- 0 until vectorPeRow )
         for ( p <- 0 until numPeMultiplier ) {
           val multiplierIndex = a * numPeMultiplier + p
-          groupProcessingElementVector(r)(c).io.inputA(multiplierIndex) := groupProcessingElementVector(r)(c-1).io.outputA.get(multiplierIndex)
+          processingElementVector(r)(c).io.inputA(multiplierIndex) := processingElementVector(r)(c-1).io.outputA.get(multiplierIndex)
         }
 
   for( r <- 1 until groupPeRow)
@@ -147,32 +158,71 @@ class SystolicTensorArray[T <: Data](
       for( b <- 0 until vectorPeCol)
         for( p <- 0 until numPeMultiplier) {
           val multiplierIndex = b * numPeMultiplier + p
-          groupProcessingElementVector(r)(c).io.inputB(multiplierIndex) := groupProcessingElementVector(r-1)(c).io.outputB.get(multiplierIndex)
+          processingElementVector(r)(c).io.inputB(multiplierIndex) := processingElementVector(r-1)(c).io.outputB.get(multiplierIndex)
         }
 
-  for(i <- 0 until groupPeRow; j <- 0 until groupPeCol; k <- 0 until numProcessingElemnt) {
+  for {
+    r <- 0 until groupPeRow
+    c <- 0 until groupPeCol
+  } {
 
-    //Case0
-    if(i == 0 && j == 0)
-      io.outputC(k) := groupProcessingElementVector(i)(j).io.outputC(k)
+    if (isOutputPosition(r, c)) {
+      val currentPe = processingElementVector(r)(c)
 
-    //Case1
-    if( (0 < i && i < groupPeRow && j == 0 && i != 0) || ( i == groupPeRow - 1 && 0 < j &&  j < groupPeCol - 1 && i != 0) )
-      io.outputC(i * numProcessingElemnt + j * numProcessingElemnt + k) := groupProcessingElementVector(i)(j).io.outputC(k)
+      currentPe.io.outputC match {
+        case vec: Vec[_] =>
+          for ( i <- 0 until numProcessingElemnt) {
+            val outputIndex = r * numProcessingElemnt + c * numProcessingElemnt + i
+            io.outputC(outputIndex) := vec(i)
+          }
 
-    //Case2
-    if( i == groupPeRow - 1 && j == groupPeCol - 1)
-      io.outputC(i * numProcessingElemnt + j * numProcessingElemnt + k) := groupProcessingElementVector(i)(j).io.outputC(k)
+        case data: Data =>
+          val outputIndex = r * numProcessingElemnt + c * numProcessingElemnt
+          io.outputC(outputIndex) := data
 
-    //Case3
-    if( (0 <= i && i < groupPeRow - 1 && j == groupPeCol - 1 && j != 0) || (i == 0 && 0 < j && j < groupPeCol - 1 && j != 0 ))
-      groupProcessingElementVector(i + 1)(j - 1).io.inputC.get(k) := groupProcessingElementVector(i)(j).io.outputC(k)
-
-    //Case4
-    if (0 < i  &&  i< groupPeRow - 1 && 0< j && j < groupPeCol - 1) {
-      groupProcessingElementVector(i + 1)(j - 1).io.inputC.get(k) := groupProcessingElementVector(i)(j).io.outputC(k)
+        case _ =>
+          throw new Exception("Wrong wiring")
+      }
 
     }
+
+    if (canConnectDiagonally(r, c)) {
+      val targetPe = processingElementVector(r+1)(c-1)
+      val currentPe = processingElementVector(r)(c)
+
+      (targetPe.io.inputC, currentPe.io.outputC) match {
+
+        case (Some(inputC: Vec[_]), outputC: Vec[_]) =>
+          for ( i <- 0 until numProcessingElemnt){
+            inputC(i) := outputC(i)
+          }
+
+        case (Some(inputC: Data), outputC: Data) =>
+          inputC := outputC
+
+        case _ =>
+          throw new Exception("Wrong wiring")
+
+      }
+    }
+
+  }
+
+  def isOutputPosition(r: Int, c: Int): Boolean = {
+    val isFirstElement = r == 0 && c == 0
+    val isLeftOrBottomEdge = (0 < r && r < groupPeRow && c == 0) ||
+      (r == groupPeRow - 1 && 0 < c && c < groupPeCol - 1)
+    val isLastElement = r == groupPeRow - 1 && c == groupPeCol - 1
+
+    isFirstElement || isLeftOrBottomEdge || isLastElement
+  }
+
+  def canConnectDiagonally(r: Int, c: Int): Boolean = {
+    val isRightEdgeExceptLast = (0 <= r && r < groupPeRow - 1 && c == groupPeCol - 1)
+    val isTopEdgeExceptFirst = (r == 0 && 0 < c && c < groupPeCol - 1)
+    val isMiddle = (0 < r && r < groupPeRow - 1 && 0 < c && c < groupPeCol - 1)
+
+    isRightEdgeExceptLast || isTopEdgeExceptFirst || isMiddle
   }
 
 }

@@ -5,20 +5,41 @@ import stag.common.{Mac, PortConfig, Arithmetic, ParallelMultiplier, VerilogNami
 
 class VectorProcessingElement[T <: Data](
   numPeMultiplier: Int,
+  withOutputA: Boolean,
+  withOutputB: Boolean,
+  withInputC: Boolean,
   portConfig: PortConfig[T],
-)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming{
+)( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming with ProcessingElementIo[T] {
 
   override def desiredName: String = camelToSnake( if(numPeMultiplier == 1) "ProcessingElement" else "VectorProcessingElement")
 
   val outputTypeC = portConfig.getStaOutputTypeC
-  val outputRegister = RegInit(ev.zero(outputTypeC.getWidth))
+  val partialSumRegister = RegInit(ev.zero(outputTypeC.getWidth))
 
-  val io = IO(new Bundle {
+  override type OutputType = T
+
+  override val io = IO(new Bundle {
     val inputA = Input(Vec(numPeMultiplier, portConfig.inputTypeA))
     val inputB = Input(Vec(numPeMultiplier, portConfig.inputTypeB))
+    val inputC = if(withInputC) Some(Input(outputTypeC)) else None
+
     val partialSumReset = Input(Bool())
-    val output = Output(outputTypeC)
+    val propagateOutput = if(withInputC) Some(Input(Bool())) else None
+
+    val outputA = if(withOutputA) Some(Output(Vec(numPeMultiplier, portConfig.inputTypeA))) else None
+    val outputB = if(withOutputB) Some(Output(Vec(numPeMultiplier, portConfig.inputTypeB))) else None
+    val outputC = Output(outputTypeC)
   })
+
+  if(withOutputA){
+    val registerA = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeA.getWidth)))
+    io.outputA.get := registerA
+  }
+
+  if(withOutputB){
+    val registerB = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeB.getWidth)))
+    io.outputB.get := registerB
+  }
 
   val multiplyResult = if (numPeMultiplier == 1){
 
@@ -48,13 +69,20 @@ class VectorProcessingElement[T <: Data](
 
   }
 
-  val partialSum = WireDefault(outputRegister)
+  val partialSum = WireDefault(partialSumRegister)
 
   when(io.partialSumReset) {
     partialSum := ev.zero(outputTypeC.getWidth)
   }
 
-  outputRegister := ev.add(multiplyResult, partialSum)
-  io.output := outputRegister
+  partialSumRegister := ev.add(multiplyResult, partialSum)
+
+  if(withInputC){
+    val outputRegister = RegInit(ev.zero(outputTypeC.getWidth))
+    outputRegister := Mux(io.propagateOutput.get, io.inputC.get, partialSumRegister)
+    io.outputC := outputRegister
+  } else {
+    io.outputC := partialSumRegister
+  }
 
 }

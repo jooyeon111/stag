@@ -9,9 +9,9 @@ class GroupProcessingElement[T <: Data](
   numPeMultiplier: Int,
   withOutputA: Boolean,
   withOutputB: Boolean,
-  val withInputC: Boolean,
+  withInputC: Boolean,
   portConfig: PortConfig[T],
-)( implicit ev: Arithmetic[T]) extends Module with VerilogNaming{
+)( implicit ev: Arithmetic[T]) extends Module with VerilogNaming with ProcessingElementIo[T]{
 
   override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
@@ -20,7 +20,15 @@ class GroupProcessingElement[T <: Data](
   val numInputB: Int = numPeMultiplier * vectorPeCol
   val numProcessingElement: Int = vectorPeRow * vectorPeCol
 
-  val vectorProcessingElementVector = Vector.fill(vectorPeRow, vectorPeCol)(Module( new VectorProcessingElement(numPeMultiplier, portConfig)))
+  val vectorProcessingElementVector = Vector.fill(vectorPeRow, vectorPeCol)(
+    Module( new VectorProcessingElement(
+      numPeMultiplier,
+      false,
+      false,
+      false,
+      portConfig
+    ))
+  )
 
   val outputTypeC = portConfig.getStaOutputTypeC
 
@@ -28,7 +36,9 @@ class GroupProcessingElement[T <: Data](
   val registerOutputB = RegInit(VecInit(Seq.fill(numInputB)(ev.zero(portConfig.inputTypeB.getWidth))))
   val registerOutputC = RegInit(VecInit(Seq.fill(numProcessingElement)(ev.zero(outputTypeC.getWidth))))
 
-  val io = IO(new Bundle {
+  override type OutputType = Vec[T]
+
+  override val io = IO(new Bundle {
 
     //Input
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA ))
@@ -36,8 +46,8 @@ class GroupProcessingElement[T <: Data](
     val inputC = if(withInputC) Some(Input(Input(Vec(numProcessingElement, outputTypeC)))) else None
 
     //Control
-    val propagateOutput = if(withInputC) Some(Input(Bool())) else None
     val partialSumReset = Input(Bool())
+    val propagateOutput = if(withInputC) Some(Input(Bool())) else None
 
     //Output
     val outputA = if(withOutputA) Some(Output(Vec(numInputA, portConfig.inputTypeA))) else None
@@ -72,9 +82,9 @@ class GroupProcessingElement[T <: Data](
     for( b <- 0 until vectorPeCol){
       val index = a * vectorPeCol + b
       if(withInputC)
-        registerOutputC(index) := Mux(io.propagateOutput.get, io.inputC.get(index), vectorProcessingElementVector(a)(b).io.output)
+        registerOutputC(index) := Mux(io.propagateOutput.get, io.inputC.get(index), vectorProcessingElementVector(a)(b).io.outputC)
       else
-        registerOutputC(index) := vectorProcessingElementVector(a)(b).io.output
+        registerOutputC(index) := vectorProcessingElementVector(a)(b).io.outputC
     }
 
   //Wiring Output
