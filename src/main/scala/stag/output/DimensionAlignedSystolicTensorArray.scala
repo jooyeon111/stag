@@ -34,6 +34,7 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
     PreProcessorType.A,
     portConfig.inputTypeA
   ))
+
   val preProcessorInputB = Module (new PreProcessor(
     groupPeCol,
     vectorPeCol,
@@ -42,14 +43,27 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
     PreProcessorType.B,
     portConfig.inputTypeB
   ))
-  val systolicTensorArray = Module (new SystolicTensorArray(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, numPeMultiplier, portConfig, generateRtl = false))
-  val postProcessor = Module (new DeskewBuffer(groupPeRow, groupPeCol, vectorPeRow, vectorPeCol, outputTypeC))
+
+  val systolicTensorArray = Module (new SystolicTensorArray(
+    groupPeRow,
+    groupPeCol,
+    vectorPeRow,
+    vectorPeCol,
+    numPeMultiplier,
+    portConfig))
+
+  val postProcessor = Module (new DeskewBuffer(
+    groupPeRow,
+    groupPeCol,
+    vectorPeRow,
+    vectorPeCol,
+    outputTypeC
+  ))
 
   val io = IO(new Bundle {
     val inputA = Input(Vec(numInputA, portConfig.inputTypeA))
     val inputB = Input(Vec(numInputB, portConfig.inputTypeB))
     val propagateOutput =  Input(Vec(numPropagateOutput, Bool()))
-//    val partialSumReset =  Input(Vec(groupPeRow, Vec(groupPeCol, Bool())))
     val partialSumReset =  Input(Vec(numPartialSumReset, Bool()))
     val outputC = Output(Vec(numOutput, outputTypeC))
   })

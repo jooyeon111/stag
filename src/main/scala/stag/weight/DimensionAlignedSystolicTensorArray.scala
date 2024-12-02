@@ -26,7 +26,6 @@ class DimensionAlignedSystolicTensorArray[T <: Data](
 
   override def desiredName: String = dedicatedName
 
-  //TODO fix below code
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
   val numInputB: Int = groupPeCol * vectorPeCol * numPeMultiplier
   val numPropagateB: Int = groupPeRow * vectorPeRow

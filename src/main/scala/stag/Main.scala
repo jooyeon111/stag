@@ -7,39 +7,7 @@ import chisel3.util.log2Ceil
 import stag.common.Arithmetic._
 import scala.util.{Failure, Success, Try}
 
-object MainApp extends App {
-
-  object Dataflow extends Enumeration {
-    type Dataflow = Value
-    val Is, Os, Ws = Value
-  }
-
-  object IntegerType extends Enumeration {
-    type IntegerType = Value
-    val Signed, UnSigned = Value
-  }
-
-  object StaHierarchy extends Enumeration {
-    type StaHierarchy = Value
-    val Sta, DimensionAlignedSta, StaEngine = Value
-  }
-
-  case class PortBitWidthInfo(
-    bitWidthPortA: Int,
-    bitWidthPortB: Int,
-    bitWidthMultiplierOutput: Int,
-    bitWidthAdderTreeOutput: Int,
-    enableUserBitWidth: Boolean,
-    bitWidthPortC: Int
-  )
-
-  case class AppConfig (
-    hierarchy: StaHierarchy.Value,
-    dataflow: Dataflow.Value,
-    arrayConfig: SystolicTensorArrayConfig,
-    integerType: IntegerType.Value,
-    portBitWidthInfo: PortBitWidthInfo
-  )
+object Main extends App {
 
   def parseArgs(args: Array[String]): Either[String, String] = {
     args match {
@@ -51,11 +19,7 @@ object MainApp extends App {
 
   def parseConfig(config: ConfigParser.Config): Try[AppConfig] = Try {
 
-    val hierarchy = config.getString("Hierarchy").get match {
-      case "sta" => StaHierarchy.Sta
-      case "dimension_aligned_sta" => StaHierarchy.DimensionAlignedSta
-      case _ => throw new IllegalArgumentException("Invalid systolic tensor array hierarchy")
-    }
+    val splitVerilogOutput = config.getBoolean("Split Verilog Output").get
 
     val dataflow = config.getString("Dataflow").get match {
       case "IS" => Dataflow.Is
@@ -114,7 +78,7 @@ object MainApp extends App {
 
 
     AppConfig(
-      hierarchy = hierarchy,
+      splitVerilogOutput = splitVerilogOutput,
       dataflow = dataflow,
       arrayConfig = arrayConfig,
       integerType = integerType,
@@ -123,21 +87,22 @@ object MainApp extends App {
 
   }
 
-
   def generateRtl(appConfig: AppConfig): Unit = {
-    val AppConfig(hierarchy, dataflow, arrayConfig, integerType, portBitWidthInfo) = appConfig
+    val AppConfig(splitVerilogOutput, dataflow, arrayConfig, integerType, portBitWidthInfo) = appConfig
 
     integerType match {
       case IntegerType.Signed =>
-        generateRtlForType[SInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, (w:Int) => SInt(w.W))
+        generateRtlForType[SInt](splitVerilogOutput, arrayConfig, portBitWidthInfo, dataflow, (w: Int) => SInt(w.W))
+
       case IntegerType.UnSigned =>
-        generateRtlForType[UInt](arrayConfig, portBitWidthInfo, hierarchy, dataflow, (w:Int) => UInt(w.W))
+        generateRtlForType[UInt](splitVerilogOutput, arrayConfig, portBitWidthInfo, dataflow, (w: Int) => UInt(w.W))
     }
   }
+
   def generateRtlForType[T <: Data](
+     splitVerilogOutput: Boolean,
      arrayConfig: SystolicTensorArrayConfig,
      portBitWidthInfo: PortBitWidthInfo,
-     hierarchy: StaHierarchy.Value,
      dataflow: Dataflow.Value,
      typeConstructor: Int => T
    )(implicit ev: Arithmetic[T]): Unit = {
@@ -157,31 +122,29 @@ object MainApp extends App {
       outputTypeC
     )
 
-    val prefix = if (hierarchy == StaHierarchy.DimensionAlignedSta) "dimension_aligned_" else ""
     val dataflowString = dataflow.toString.toLowerCase
-    val generatedFileName = s"${prefix}${dataflowString}_sta_${arrayConfig.arrayConfigString}"
+    val generatedFileName = s"${dataflowString}_sta_${arrayConfig.arrayConfigString}"
 
-    lazy val rtlGenerator =  (hierarchy, dataflow) match {
-      case (StaHierarchy.Sta, Dataflow.Is) =>
-        new stag.input.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
-      case (StaHierarchy.Sta, Dataflow.Os) =>
-        new stag.output.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
-      case (StaHierarchy.Sta, Dataflow.Ws) =>
-        new stag.weight.SystolicTensorArray(arrayConfig, portConfig, generateRtl = true)
-      case (StaHierarchy.DimensionAlignedSta, Dataflow.Is) =>
+    lazy val rtlGenerator =  dataflow match {
+      case Dataflow.Is =>
         new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
-      case (StaHierarchy.DimensionAlignedSta, Dataflow.Os) =>
+      case Dataflow.Os =>
         new stag.output.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
-      case (StaHierarchy.DimensionAlignedSta, Dataflow.Ws) =>
+      case Dataflow.Ws =>
         new stag.weight.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
     }
 
-    //TODO split verilog parametrization
-    ChiselStage.emitSystemVerilogFile(
-      rtlGenerator,
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName/", "-split-verilog")
-//      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=./output/$generatedFileName.sv")
-    )
+    if(splitVerilogOutput){
+      ChiselStage.emitSystemVerilogFile(
+        rtlGenerator,
+        firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=output/$generatedFileName/", "-split-verilog")
+      )
+    } else {
+      ChiselStage.emitSystemVerilogFile(
+        rtlGenerator,
+        firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info", s"-o=./output/$generatedFileName.sv")
+      )
+    }
 
   }
 

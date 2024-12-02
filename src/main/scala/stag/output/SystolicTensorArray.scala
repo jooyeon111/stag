@@ -10,7 +10,6 @@ class SystolicTensorArray[T <: Data](
   vectorPeCol : Int,
   numPeMultiplier : Int,
   portConfig: PortConfig[T],
-  generateRtl: Boolean
 )( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming{
 
   override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
@@ -22,7 +21,6 @@ class SystolicTensorArray[T <: Data](
       arrayConfig.vectorPeCol,
       arrayConfig.numPeMultiplier,
       portConfig,
-      generateRtl
     )
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
@@ -75,74 +73,38 @@ class SystolicTensorArray[T <: Data](
     val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
-  if(generateRtl){
+  //Wiring Input A
+  for (r <- 0 until groupPeRow)
+    for (a <- 0 until vectorPeRow)
+      for (p <- 0 until numPeMultiplier) {
+        val multiplierIndex = a * numPeMultiplier + p
+        processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
+      }
 
-    //Wiring Input A
-    for( r <- 0 until groupPeRow )
-      for( a <- 0 until vectorPeRow )
-        for( p <- 0 until numPeMultiplier ) {
-          val multiplierIndex = a * numPeMultiplier + p
-          processingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), ev.zero(portConfig.inputTypeA.getWidth))
-        }
-
-    //Wiring B
-    for( c <- 0 until groupPeCol)
-      for( b <- 0 until vectorPeCol)
-        for (p <- 0 until numPeMultiplier) {
-          val multiplierIndex = b * numPeMultiplier + p
-          processingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB(multiplierIndex + ( c * vectorPeCol * numPeMultiplier )), ev.zero(portConfig.inputTypeB.getWidth) )
-        }
-
-    for( r <- 1 until groupPeRow )
-      for( c <- 0 until groupPeCol - 1 )
-        processingElementVector(r)(c).io.partialSumReset := RegNext(io.partialSumReset(r + c), false.B)
+  //Wiring B
+  for (c <- 0 until groupPeCol)
+    for (b <- 0 until vectorPeCol)
+      for (p <- 0 until numPeMultiplier) {
+        val multiplierIndex = b * numPeMultiplier + p
+        processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
+      }
 
 
-    for (i <- 0 until numPropagateOutput)
-      for (r <- 0 until groupPeRow)
-        for (c <- 0 until groupPeCol)
-          if (r - 1 == i && groupPeCol - 2 > c) {
-            processingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
-          } else if (r - 1 == i && groupPeCol - 2 - c == i) {
-            processingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
-          } else if (i < r - 1 && groupPeCol - 2 - c == i) {
-            processingElementVector(r)(c).io.propagateOutput.get := RegNext(io.propagateOutput(i), false.B)
-          }
-
-  } else {
-
-    //Wiring Input A
-    for (r <- 0 until groupPeRow)
-      for (a <- 0 until vectorPeRow)
-        for (p <- 0 until numPeMultiplier) {
-          val multiplierIndex = a * numPeMultiplier + p
-          processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
-        }
-
-    //Wiring B
+  for (r <- 0 until groupPeRow)
     for (c <- 0 until groupPeCol)
-      for (b <- 0 until vectorPeCol)
-        for (p <- 0 until numPeMultiplier) {
-          val multiplierIndex = b * numPeMultiplier + p
-          processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
-        }
+      processingElementVector(r)(c).io.partialSumReset := io.partialSumReset(r + c)
 
-
+  for (i <- 0 until numPropagateOutput)
     for (r <- 0 until groupPeRow)
       for (c <- 0 until groupPeCol)
-        processingElementVector(r)(c).io.partialSumReset := io.partialSumReset(r + c)
+        if (r - 1 == i && groupPeCol - 2 > c) {
+          processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+        } else if (r - 1 == i && groupPeCol - 2 - c == i) {
+          processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+        } else if (i < r - 1 && groupPeCol - 2 - c == i) {
+          processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
+        }
 
-    for (i <- 0 until numPropagateOutput)
-      for (r <- 0 until groupPeRow)
-        for (c <- 0 until groupPeCol)
-          if (r - 1 == i && groupPeCol - 2 > c) {
-            processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
-          } else if (r - 1 == i && groupPeCol - 2 - c == i) {
-            processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
-          } else if (i < r - 1 && groupPeCol - 2 - c == i) {
-            processingElementVector(r)(c).io.propagateOutput.get := io.propagateOutput(i)
-          }
-  }
 
   //Wiring Input A
   for ( r <- 0 until groupPeRow )

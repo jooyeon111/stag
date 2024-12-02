@@ -10,12 +10,12 @@ class SystolicTensorArray[T <: Data](
   vectorPeCol : Int,
   numPeMultiplier : Int,
   portConfig: PortConfig[T],
-  generateRtl: Boolean
+//  generateRtl: Boolean
 )( implicit ev: Arithmetic[T] ) extends Module with VerilogNaming{
 
   override val desiredName:String = camelToSnake(this.getClass.getSimpleName)
 
-  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T], generateRtl: Boolean)(implicit ev: Arithmetic[T]) =
+  def this(arrayConfig: SystolicTensorArrayConfig, portConfig: PortConfig[T])(implicit ev: Arithmetic[T]) =
     this(
       arrayConfig.groupPeRow,
       arrayConfig.groupPeCol,
@@ -23,7 +23,6 @@ class SystolicTensorArray[T <: Data](
       arrayConfig.vectorPeCol,
       arrayConfig.numPeMultiplier,
       portConfig,
-      generateRtl
     )
 
   val numInputA: Int = groupPeRow * vectorPeRow * numPeMultiplier
@@ -83,81 +82,37 @@ class SystolicTensorArray[T <: Data](
     val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
-  if(generateRtl){
-
-    //Wiring Input A
-    for( r <- 0 until groupPeRow)
-      for( a <- 0 until vectorPeRow)
-        for( p <- 0 until numPeMultiplier) {
-          val multiplierIndex = a * numPeMultiplier + p
-          processingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext( io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), ev.zero(portConfig.inputTypeA.getWidth))
-        }
-
-    //Wiring Input B
-    for( c <- 0 until groupPeCol)
-      for( b <- 0 until vectorPeCol)
-        for( p <- 0 until numPeMultiplier) {
-          val multiplierIndex = b * numPeMultiplier + p
-          processingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext( io.inputB( multiplierIndex + (c * vectorPeCol * numPeMultiplier )), ev.zero(portConfig.inputTypeB.getWidth))
-        }
-
-    //Wiring Control
-    for( r <- 0 until groupPeRow )
-      for( c <- 0 until groupPeCol ) {
-          val pe = processingElementVector(r)(c)
-          pe.io.propagateA match{
-            case vec: Vec[_] =>
-              for ( b <- 0 until vectorPeCol)
-                vec(b) := RegNext(io.propagateA(b + c * vectorPeCol), false.B)
-
-            case bool: Bool=>
-              bool := RegNext(io.propagateA(c), false.B )
-            case _ =>
-              throw new Exception("Wrong type")
-          }
-        }
-
-  } else {
-
-    //Wiring Input A
-    for( r <- 0 until groupPeRow)
-      for( a <- 0 until vectorPeRow)
-        for( p <- 0 until numPeMultiplier) {
-          val multiplierIndex = a * numPeMultiplier + p
-          processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
-        }
-
-    //Wiring Input B
-    for( c <- 0 until groupPeCol)
-      for( b <- 0 until vectorPeCol)
-        for( p <- 0 until numPeMultiplier) {
-          val multiplierIndex = b * numPeMultiplier + p
-          processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB( multiplierIndex + (c * vectorPeCol * numPeMultiplier ))
-        }
-
-    //Wiring Control
-//    for( r <- 0 until groupPeRow )
-//      for( c <- 0 until groupPeCol )
-//        for( b <- 0 until vectorPeCol)
-//          groupProcessingElementVector(r)(c).io.propagateA(b) := io.propagateA(b + c * vectorPeCol)
-
-    for( r <- 0 until groupPeRow )
-      for( c <- 0 until groupPeCol ) {
-        val pe = processingElementVector(r)(c)
-        pe.io.propagateA match{
-          case vec: Vec[_] =>
-            for ( b <- 0 until vectorPeCol)
-              vec(b) := io.propagateA(b + c * vectorPeCol)
-
-          case bool: Bool=>
-            bool := io.propagateA(c)
-
-          case _ =>
-            throw new Exception("Wrong Type")
-        }
+  //Wiring Input A
+  for( r <- 0 until groupPeRow)
+    for( a <- 0 until vectorPeRow)
+      for( p <- 0 until numPeMultiplier) {
+        val multiplierIndex = a * numPeMultiplier + p
+        processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
       }
 
-  }
+  //Wiring Input B
+  for( c <- 0 until groupPeCol)
+    for( b <- 0 until vectorPeCol)
+      for( p <- 0 until numPeMultiplier) {
+        val multiplierIndex = b * numPeMultiplier + p
+        processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB( multiplierIndex + (c * vectorPeCol * numPeMultiplier ))
+      }
+
+  for( r <- 0 until groupPeRow )
+    for( c <- 0 until groupPeCol ) {
+      val pe = processingElementVector(r)(c)
+      pe.io.propagateA match{
+        case vec: Vec[_] =>
+          for ( b <- 0 until vectorPeCol)
+            vec(b) := io.propagateA(b + c * vectorPeCol)
+
+        case bool: Bool=>
+          bool := io.propagateA(c)
+
+        case _ =>
+          throw new Exception("Wrong Type")
+      }
+    }
 
   //Wiring Output A
   for( r <- 0 until groupPeRow)

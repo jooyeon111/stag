@@ -21,4 +21,24 @@ lazy val root = (project in file("."))
       "-Ymacro-annotations",
     ),
     addCompilerPlugin("org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full),
+
+
+    Test / test := {
+      throw new MessageOnlyException(
+        """
+          |ERROR: Direct test execution is disabled.
+          |Please use Makefile please
+          |""".stripMargin
+      )
+    },
+
+    Test / testOnly := {
+      throw new MessageOnlyException(
+        """
+          |ERROR: Direct test execution is disabled.
+          |Please use Makefile please
+          |""".stripMargin
+      )
+    }
+
   )

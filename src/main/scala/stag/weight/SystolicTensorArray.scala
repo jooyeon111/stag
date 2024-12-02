@@ -80,83 +80,37 @@ class SystolicTensorArray[T <: Data](
     val outputC = Output(Vec(numOutput, outputTypeC))
   })
 
-  if(generateRtl){
-    //Wiring Input A
-    for( r <- 0 until groupPeRow)
-      for( a <- 0 until vectorPeRow)
-        for( p <- 0 until numPeMultiplier){
-          val multiplierIndex = a * numPeMultiplier + p
-          processingElementVector(r)(0).io.inputA(multiplierIndex) := RegNext(io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier)), ev.zero(portConfig.inputTypeA.getWidth))
-        }
-
-    //Wiring Input B
-    for( c <- 0 until groupPeCol )
-      for( b <- 0 until vectorPeCol)
-        for( p <- 0 until numPeMultiplier){
-          val multiplierIndex = b * numPeMultiplier + p
-          processingElementVector(0)(c).io.inputB(multiplierIndex) := RegNext(io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier)), ev.zero(portConfig.inputTypeB.getWidth))
-
-        }
-
-    //Wiring Control
-//    for( r <- 0 until groupPeRow )
-//      for( c <- 0 until groupPeCol )
-//        for( a <- 0 until vectorPeRow )
-//          processingElementVector(r)(c).io.propagateB(a) := RegNext(io.propagateB(a + r * vectorPeRow), false.B)
-
-    for( r <- 0 until groupPeRow )
-      for( c <- 0 until groupPeCol ) {
-        val pe = processingElementVector(r)(c)
-        pe.io.propagateB match {
-          case vec: Vec[Bool] =>
-            for( a <- 0 until vectorPeRow)
-              vec(a) := RegNext(io.propagateB(a + r * vectorPeRow), false.B)
-
-          case bool: Bool =>
-            bool := RegNext(io.propagateB(r), false.B)
-        }
+  //Wiring Input A
+  for( r <- 0 until groupPeRow)
+    for( a <- 0 until vectorPeRow)
+      for( p <- 0 until numPeMultiplier){
+        val multiplierIndex = a * numPeMultiplier + p
+        processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
       }
 
+  //Wiring Input B
+  for( c <- 0 until groupPeCol )
+    for( b <- 0 until vectorPeCol)
+      for( p <- 0 until numPeMultiplier){
+        val multiplierIndex = b * numPeMultiplier + p
+        processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
 
-  } else {
-    //Wiring Input A
-    for( r <- 0 until groupPeRow)
-      for( a <- 0 until vectorPeRow)
-        for( p <- 0 until numPeMultiplier){
-          val multiplierIndex = a * numPeMultiplier + p
-          processingElementVector(r)(0).io.inputA(multiplierIndex) := io.inputA(multiplierIndex + (r * vectorPeRow * numPeMultiplier))
-        }
-
-    //Wiring Input B
-    for( c <- 0 until groupPeCol )
-      for( b <- 0 until vectorPeCol)
-        for( p <- 0 until numPeMultiplier){
-          val multiplierIndex = b * numPeMultiplier + p
-          processingElementVector(0)(c).io.inputB(multiplierIndex) := io.inputB(multiplierIndex + (c * vectorPeCol * numPeMultiplier))
-
-        }
-
-    //Wiring Control
-//    for( r <- 0 until groupPeRow )
-//      for( c <- 0 until groupPeCol )
-//        for( a <- 0 until vectorPeRow )
-//          processingElementVector(r)(c).io.propagateB(a) := io.propagateB(a + r * vectorPeRow)
-
-
-    for( r <- 0 until groupPeRow )
-      for( c <- 0 until groupPeCol ) {
-        val pe = processingElementVector(r)(c)
-        pe.io.propagateB match {
-          case vec: Vec[Bool] =>
-            for( a <- 0 until vectorPeRow)
-              vec(a) := RegNext(io.propagateB(a + r * vectorPeRow), false.B)
-
-          case bool: Bool =>
-            bool := RegNext(io.propagateB(r), false.B)
-        }
       }
 
-  }
+  for( r <- 0 until groupPeRow )
+    for( c <- 0 until groupPeCol ) {
+      val pe = processingElementVector(r)(c)
+      pe.io.propagateB match {
+        case vec: Vec[_] =>
+          for( a <- 0 until vectorPeRow)
+            vec(a) := RegNext(io.propagateB(a + r * vectorPeRow), false.B)
+
+        case bool: Bool =>
+          bool := RegNext(io.propagateB(r), false.B)
+      }
+    }
+
+
 
   for( r <- 0 until groupPeRow )
     for( c <- 1 until groupPeCol )
@@ -188,6 +142,7 @@ class SystolicTensorArray[T <: Data](
 
         case (Some(inputC: Data), outputC: Data) =>
           inputC := outputC
+
         case _ =>
           throw new Exception("Wrong Type")
       }
