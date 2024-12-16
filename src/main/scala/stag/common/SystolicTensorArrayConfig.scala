@@ -1,6 +1,12 @@
 package stag.common
 
-case class SystolicTensorArrayConfig(groupPeRow: Int, groupPeCol: Int, vectorPeRow: Int, vectorPeCol: Int, numPeMultiplier: Int ) {
+case class SystolicTensorArrayConfig(
+  groupPeRow: Int,
+  groupPeCol: Int,
+  vectorPeRow: Int,
+  vectorPeCol: Int,
+  numPeMultiplier: Int
+) {
 
   val arrayConfigString = s"${groupPeRow}x${groupPeCol}x${vectorPeRow}x${vectorPeCol}x$numPeMultiplier"
 

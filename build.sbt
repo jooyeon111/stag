@@ -27,7 +27,7 @@ lazy val root = (project in file("."))
       throw new MessageOnlyException(
         """
           |ERROR: Direct test execution is disabled.
-          |Please use Makefile please
+          |Please use Makefile
           |""".stripMargin
       )
     },
@@ -36,7 +36,7 @@ lazy val root = (project in file("."))
       throw new MessageOnlyException(
         """
           |ERROR: Direct test execution is disabled.
-          |Please use Makefile please
+          |Please use Makefile
           |""".stripMargin
       )
     }
