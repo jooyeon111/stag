@@ -48,6 +48,7 @@ class VectorProcessingElement[T <: Data](
   //Port A
   if(withOutputA){
     val registerA = RegInit(VecInit.fill(numPeMultiplier)(ev.zero(portConfig.inputTypeA.getWidth)))
+    registerA := io.inputA
     io.outputA.get := registerA
   }
 

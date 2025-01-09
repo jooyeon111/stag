@@ -103,10 +103,10 @@ class SystolicTensorArray[T <: Data](
       pe.io.propagateB match {
         case vec: Vec[_] =>
           for( a <- 0 until vectorPeRow)
-            vec(a) := RegNext(io.propagateB(a + r * vectorPeRow), false.B)
+            vec(a) := io.propagateB(a + r * vectorPeRow)
 
         case bool: Bool =>
-          bool := RegNext(io.propagateB(r), false.B)
+          bool := io.propagateB(r)
       }
     }
 
