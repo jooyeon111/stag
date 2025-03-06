@@ -4,9 +4,9 @@ WS_CONFIG := weight_stationary.cfg
 
 .PHONY: all
 all:
-	sbt "runMain stag.Main ${IS_CONFIG_FILE}"
-	sbt "runMain stag.Main ${OS_CONFIG_FILE}"
-	sbt "runMain stag.Main ${WS_CONFIG_FILE}"
+	sbt "runMain stag.Main ${IS_CONFIG}"
+	sbt "runMain stag.Main ${OS_CONFIG}"
+	sbt "runMain stag.Main ${WS_CONFIG}"
 
 
 clean:
