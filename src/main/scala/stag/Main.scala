@@ -46,6 +46,11 @@ object Main extends App with ConfigurationParser {
     val dataflowString = dataflow.toString.toLowerCase
     val generatedFileName = s"${dataflowString}_sta_${arrayConfig.arrayConfigString}"
 
+    val outputDir = new java.io.File("output")
+    if(!outputDir.exists()){
+      outputDir.mkdir()
+    }
+
     lazy val rtlGenerator =  dataflow match {
       case Dataflow.Is =>
         new stag.input.DimensionAlignedSystolicTensorArray(arrayConfig, generatedFileName, portConfig)
